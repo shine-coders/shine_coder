@@ -906,7 +906,7 @@ pub fn decode_cast_flags(bits: BitArray) {
 
 /// Cast flags define the behavior of the `cast` instruction, defining which
 /// heap type operands are nullable.
-/// 
+///
 /// Please see the control instructions for more information:
 /// https://webassembly.github.io/gc/core/binary/instructions.html#control-instructions
 pub fn encode_cast_flags(builder: BytesBuilder, cast_flags: #(Bool, Bool)) {
