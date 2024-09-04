@@ -1,29 +1,29 @@
-import builder/expression_builder.{type ExpressionBuilder}
+import builder/expression.{type ExpressionBuilder}
 import internal/structure/types.{
   type DataIDX, MemoryCopy, MemoryFill, MemoryGrow, MemoryInit, MemorySize,
 }
 
 pub fn copy(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(MemoryCopy)
+  |> expression.push(MemoryCopy)
 }
 
 pub fn fill(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(MemoryFill)
+  |> expression.push(MemoryFill)
 }
 
 pub fn grow(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(MemoryGrow)
+  |> expression.push(MemoryGrow)
 }
 
 pub fn init(builder: ExpressionBuilder, data_idx: DataIDX) {
   builder
-  |> expression_builder.push(MemoryInit(data_idx))
+  |> expression.push(MemoryInit(data_idx))
 }
 
 pub fn size(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(MemorySize)
+  |> expression.push(MemorySize)
 }

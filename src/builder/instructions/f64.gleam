@@ -1,4 +1,4 @@
-import builder/expression_builder.{type ExpressionBuilder}
+import builder/expression.{type ExpressionBuilder}
 import internal/structure/numbers.{type F64}
 import internal/structure/types.{
   type MemArg, F64Abs, F64Add, F64Ceil, F64Const, F64ConvertI32S, F64ConvertI32U,
@@ -9,145 +9,145 @@ import internal/structure/types.{
 
 pub fn const_(builder: ExpressionBuilder, val: F64) {
   builder
-  |> expression_builder.push(F64Const(val))
+  |> expression.push(F64Const(val))
 }
 
 pub fn nearest(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Nearest)
+  |> expression.push(F64Nearest)
 }
 
 pub fn trunc(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Trunc)
+  |> expression.push(F64Trunc)
 }
 
 pub fn floor(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Floor)
+  |> expression.push(F64Floor)
 }
 
 pub fn ceil(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Ceil)
+  |> expression.push(F64Ceil)
 }
 
 pub fn sqrt(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Sqrt)
+  |> expression.push(F64Sqrt)
 }
 
 pub fn neg(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Neg)
+  |> expression.push(F64Neg)
 }
 
 pub fn abs(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Abs)
+  |> expression.push(F64Abs)
 }
 
 pub fn copysign(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Copysign)
+  |> expression.push(F64Copysign)
 }
 
 pub fn max(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Max)
+  |> expression.push(F64Max)
 }
 
 pub fn min(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Min)
+  |> expression.push(F64Min)
 }
 
 pub fn div(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Div)
+  |> expression.push(F64Div)
 }
 
 pub fn mul(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Mul)
+  |> expression.push(F64Mul)
 }
 
 pub fn sub(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Sub)
+  |> expression.push(F64Sub)
 }
 
 pub fn add(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Add)
+  |> expression.push(F64Add)
 }
 
 pub fn ge(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Ge)
+  |> expression.push(F64Ge)
 }
 
 pub fn le(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Le)
+  |> expression.push(F64Le)
 }
 
 pub fn gt(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Gt)
+  |> expression.push(F64Gt)
 }
 
 pub fn lt(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Lt)
+  |> expression.push(F64Lt)
 }
 
 pub fn ne(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Ne)
+  |> expression.push(F64Ne)
 }
 
 pub fn eq(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64Eq)
+  |> expression.push(F64Eq)
 }
 
 pub fn promote_f32(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64PromoteF32)
+  |> expression.push(F64PromoteF32)
 }
 
 pub fn convert_i64s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64ConvertI64S)
+  |> expression.push(F64ConvertI64S)
 }
 
 pub fn convert_i64u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64ConvertI64U)
+  |> expression.push(F64ConvertI64U)
 }
 
 pub fn convert_i32s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64ConvertI32S)
+  |> expression.push(F64ConvertI32S)
 }
 
 pub fn convert_i32u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64ConvertI32U)
+  |> expression.push(F64ConvertI32U)
 }
 
 pub fn reinterpret_i64(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(F64ReinterpretI64)
+  |> expression.push(F64ReinterpretI64)
 }
 
 pub fn load(builder: ExpressionBuilder, mem_arg: MemArg) {
   builder
-  |> expression_builder.push(F64Load(mem_arg))
+  |> expression.push(F64Load(mem_arg))
 }
 
 pub fn store(builder: ExpressionBuilder, mem_arg: MemArg) {
   builder
-  |> expression_builder.push(F64Store(mem_arg))
+  |> expression.push(F64Store(mem_arg))
 }
