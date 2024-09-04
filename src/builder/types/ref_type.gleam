@@ -4,6 +4,8 @@ import internal/structure/types.{
   NoFuncRefType, NoneRefType, StructRefType,
 }
 
+// Create a RefType from the given HeapType classifier and nullable option
+// https://webassembly.github.io/gc/core/syntax/types.html#reference-types
 pub fn from_heap_type(heap_type: HeapType, nullable: Bool) -> RefType {
   HeapTypeRefType(heap_type, nullable)
 }
