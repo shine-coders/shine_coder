@@ -1,5 +1,6 @@
 import gleam/option.{type Option, None, Some}
 import gleam/set.{type Set}
+import internal/binary/modules
 import internal/finger_tree.{type FingerTree}
 import internal/structure/modules.{
   type BinaryModule, type CustomSection, type ExportSection,
@@ -8,20 +9,20 @@ import internal/structure/modules.{
   DataCountSection, DataSection, ElementSection, ExportSection, FunctionSection,
   GlobalSection, ImportSection, MemorySection, StartSection, TableSection,
   TypeSection,
-}
+} as structure_modules
 import internal/structure/numbers.{type U32, u32}
 import internal/structure/types.{
-  type Export, type Expr, type FuncIDX, type Global, type GlobalIDX, type Locals,
-  type MemIDX, type MemType, type RecType, type RefType, type Table,
+  type Export, type Expr, type FuncIDX, type Global, type GlobalIDX, type Limits,
+  type Locals, type MemIDX, type MemType, type RecType, type RefType, type Table,
   type TableIDX, type TableType, type TypeIDX, type ValType, ActiveData,
   ActiveElemMode, Code, Const, DataIDX, DeclarativeElemMode, ElemExpressions,
   ElemFuncs, ElemIDX, FuncExport, FuncHeapType, FuncIDX, FuncImport,
   GlobalExport, GlobalIDX, GlobalImport, GlobalType, HeapTypeRefType, LabelIDX,
-  LocalIDX, Locals, MemExport, MemIDX, MemImport, PassiveData, PassiveElemMode,
-  TableExport, TableIDX, TableImport, TableType, TypeIDX, Var,
+  Limits, LocalIDX, Locals, MemExport, MemIDX, MemImport, MemType, PassiveData,
+  PassiveElemMode, TableExport, TableIDX, TableImport, TableType, TypeIDX, Var,
 }
 
-pub const new = modules.binary_module_new
+pub const new = structure_modules.binary_module_new
 
 pub fn custom_section(module: BinaryModule, name: String, data: BitArray) {
   case module {
@@ -546,12 +547,14 @@ pub fn import_global(
 }
 
 /// Import a table from the host. The module_name and name are used to identify the
-/// import as the host specifies it. The type of the table is defined by a TableType.
+/// import as the host specifies it. The type of the table is defined by a TableType
+/// which specifies a refrence type and the size limits of the table.
 pub fn import_table(
   module: BinaryModule,
   module_name: String,
   name: String,
-  tt: TableType,
+  ref_type: RefType,
+  limits: Limits,
 ) {
   let BinaryModule(imports: imports, ..) = module
   case imports {
@@ -559,7 +562,13 @@ pub fn import_table(
       BinaryModule(
         ..module,
         imports: Some(
-          ImportSection(finger_tree.single(TableImport(module_name, name, tt))),
+          ImportSection(
+            finger_tree.single(TableImport(
+              module_name,
+              name,
+              TableType(ref_type, limits),
+            )),
+          ),
         ),
       )
     Some(ImportSection(imports)) ->
@@ -568,7 +577,7 @@ pub fn import_table(
         imports: Some(
           ImportSection(finger_tree.push(
             imports,
-            TableImport(module_name, name, tt),
+            TableImport(module_name, name, TableType(ref_type, limits)),
           )),
         ),
       )
@@ -583,7 +592,8 @@ pub fn import_memory(
   module: BinaryModule,
   module_name: String,
   name: String,
-  mt: MemType,
+  min: U32,
+  max: Option(U32),
 ) {
   let BinaryModule(imports: imports, ..) = module
   case imports {
@@ -591,7 +601,13 @@ pub fn import_memory(
       BinaryModule(
         ..module,
         imports: Some(
-          ImportSection(finger_tree.single(MemImport(module_name, name, mt))),
+          ImportSection(
+            finger_tree.single(MemImport(
+              module_name,
+              name,
+              MemType(Limits(min, max)),
+            )),
+          ),
         ),
       )
     Some(ImportSection(imports)) ->
@@ -600,7 +616,7 @@ pub fn import_memory(
         imports: Some(
           ImportSection(finger_tree.push(
             imports,
-            MemImport(module_name, name, mt),
+            MemImport(module_name, name, MemType(Limits(min, max))),
           )),
         ),
       )
@@ -1171,4 +1187,8 @@ pub fn func_idx(idx: Int) {
     Ok(idx) -> Ok(FuncIDX(idx))
     Error(msg) -> Error(msg)
   }
+}
+
+pub fn encode(module: BinaryModule) {
+  modules.encode_module(module)
 }

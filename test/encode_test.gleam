@@ -1,4 +1,4 @@
-import builder/expression_builder
+import builder/expression
 import builder/instructions/i32
 import builder/instructions/ref
 import gleam/bit_array
@@ -578,10 +578,10 @@ pub fn table_section_test() {
   >>)
 
   let expr =
-    expression_builder.new()
+    expression.new()
     |> ref.null(structure_types.ArrayHeapType)
     // 
-    |> expression_builder.end_unwrap()
+    |> expression.end_unwrap()
 
   let example_table_init =
     structure_types.Table(
@@ -643,9 +643,9 @@ pub fn global_section_test() {
   let example_global =
     structure_types.Global(
       gt,
-      expression_builder.new()
+      expression.new()
         |> i32.const_(fourty_two)
-        |> expression_builder.end_unwrap(),
+        |> expression.end_unwrap(),
     )
 
   let global_section =
@@ -743,9 +743,9 @@ pub fn element_section_test() {
   let assert Ok(fourty_two) = numbers.i32(42)
   let assert Ok(fourty_two_unsigned) = numbers.u32(42)
   let offset_fourty_two =
-    expression_builder.new()
+    expression.new()
     |> i32.const_(fourty_two)
-    |> expression_builder.end_unwrap()
+    |> expression.end_unwrap()
 
   let table_idx_zero = structure_types.TableIDX(zero)
   let table_idx_fourty_two = structure_types.TableIDX(fourty_two_unsigned)
@@ -757,9 +757,9 @@ pub fn element_section_test() {
   let ref_null_i31 =
     structure_types.HeapTypeRefType(structure_types.I31HeapType, True)
   let null_i31 =
-    expression_builder.new()
+    expression.new()
     |> ref.null(structure_types.I31HeapType)
-    |> expression_builder.end_unwrap()
+    |> expression.end_unwrap()
 
   let three_null_i31 = finger_tree.from_list([null_i31, null_i31, null_i31])
 
@@ -1013,11 +1013,11 @@ pub fn code_section_test() {
       finger_tree.from_list([
         structure_types.Code(
           add_locals,
-          expression_builder.new()
+          expression.new()
             |> i32.const_(forty_one)
             |> i32.const_(one)
             |> i32.add()
-            |> expression_builder.end_unwrap(),
+            |> expression.end_unwrap(),
         ),
       ]),
     )
@@ -1058,14 +1058,14 @@ pub fn data_section_test() {
   let mem_idx_zero = structure_types.MemIDX(mem_idx_zero)
   let mem_idx_one = structure_types.MemIDX(mem_idx_one)
   let offset_zero_expr =
-    expression_builder.new()
+    expression.new()
     |> i32.const_(offset_zero)
-    |> expression_builder.end_unwrap()
+    |> expression.end_unwrap()
 
   let offset_ten_expr =
-    expression_builder.new()
+    expression.new()
     |> i32.const_(offset_ten)
-    |> expression_builder.end_unwrap()
+    |> expression.end_unwrap()
 
   let active_data_zero_idx =
     structure_types.ActiveData(mem_idx_zero, offset_zero_expr, <<

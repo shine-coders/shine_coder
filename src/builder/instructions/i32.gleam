@@ -1,4 +1,4 @@
-import builder/expression_builder.{type ExpressionBuilder}
+import builder/expression.{type ExpressionBuilder}
 import internal/structure/numbers.{type I32}
 import internal/structure/types.{
   type MemArg, I32Add, I32And, I32Clz, I32Const, I32Ctz, I32DivS, I32DivU, I32Eq,
@@ -12,245 +12,245 @@ import internal/structure/types.{
 
 pub fn const_(builder: ExpressionBuilder, value: I32) {
   builder
-  |> expression_builder.push(I32Const(value))
+  |> expression.push(I32Const(value))
 }
 
 pub fn popcnt(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Popcnt)
+  |> expression.push(I32Popcnt)
 }
 
 pub fn ctz(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Ctz)
+  |> expression.push(I32Ctz)
 }
 
 pub fn clz(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Clz)
+  |> expression.push(I32Clz)
 }
 
 pub fn rotr(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Rotr)
+  |> expression.push(I32Rotr)
 }
 
 pub fn rotl(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Rotl)
+  |> expression.push(I32Rotl)
 }
 
 pub fn shr_s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32ShrS)
+  |> expression.push(I32ShrS)
 }
 
 pub fn shr_u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32ShrU)
+  |> expression.push(I32ShrU)
 }
 
 pub fn shl(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Shl)
+  |> expression.push(I32Shl)
 }
 
 pub fn or(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Or)
+  |> expression.push(I32Or)
 }
 
 pub fn and(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32And)
+  |> expression.push(I32And)
 }
 
 pub fn rem_s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32RemS)
+  |> expression.push(I32RemS)
 }
 
 pub fn rem_u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32RemU)
+  |> expression.push(I32RemU)
 }
 
 pub fn div_s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32DivS)
+  |> expression.push(I32DivS)
 }
 
 pub fn div_u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32DivU)
+  |> expression.push(I32DivU)
 }
 
 pub fn mul(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Mul)
+  |> expression.push(I32Mul)
 }
 
 pub fn sub(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Sub)
+  |> expression.push(I32Sub)
 }
 
 pub fn add(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Add)
+  |> expression.push(I32Add)
 }
 
 pub fn eqz(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Eqz)
+  |> expression.push(I32Eqz)
 }
 
 pub fn ge_s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32GeS)
+  |> expression.push(I32GeS)
 }
 
 pub fn ge_u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32GeU)
+  |> expression.push(I32GeU)
 }
 
 pub fn le_s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32LeS)
+  |> expression.push(I32LeS)
 }
 
 pub fn le_u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32LeU)
+  |> expression.push(I32LeU)
 }
 
 pub fn gt_s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32GtS)
+  |> expression.push(I32GtS)
 }
 
 pub fn gt_u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32GtU)
+  |> expression.push(I32GtU)
 }
 
 pub fn lt_s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32LtS)
+  |> expression.push(I32LtS)
 }
 
 pub fn lt_u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32LtU)
+  |> expression.push(I32LtU)
 }
 
 pub fn ne(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Ne)
+  |> expression.push(I32Ne)
 }
 
 pub fn eq(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Eq)
+  |> expression.push(I32Eq)
 }
 
 pub fn extend16s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Extend16S)
+  |> expression.push(I32Extend16S)
 }
 
 pub fn extend8s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32Extend8S)
+  |> expression.push(I32Extend8S)
 }
 
 pub fn wrap_i64(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32WrapI64)
+  |> expression.push(I32WrapI64)
 }
 
 pub fn trunc_f64s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32TruncF64S)
+  |> expression.push(I32TruncF64S)
 }
 
 pub fn trunc_f64u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32TruncF64U)
+  |> expression.push(I32TruncF64U)
 }
 
 pub fn trunc_f32s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32TruncF32S)
+  |> expression.push(I32TruncF32S)
 }
 
 pub fn trunc_f32u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32TruncF32U)
+  |> expression.push(I32TruncF32U)
 }
 
 pub fn trunc_sat_f64s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32TruncSatF64S)
+  |> expression.push(I32TruncSatF64S)
 }
 
 pub fn trunc_sat_f64u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32TruncSatF64U)
+  |> expression.push(I32TruncSatF64U)
 }
 
 pub fn trunc_sat_f32s(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32TruncSatF32S)
+  |> expression.push(I32TruncSatF32S)
 }
 
 pub fn trunc_sat_f32u(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32TruncSatF32U)
+  |> expression.push(I32TruncSatF32U)
 }
 
 pub fn reinterpret_f32(builder: ExpressionBuilder) {
   builder
-  |> expression_builder.push(I32ReinterpretF32)
+  |> expression.push(I32ReinterpretF32)
 }
 
 pub fn load(builder: ExpressionBuilder, arg: MemArg) {
   builder
-  |> expression_builder.push(I32Load(arg))
+  |> expression.push(I32Load(arg))
 }
 
 pub fn store(builder: ExpressionBuilder, arg: MemArg) {
   builder
-  |> expression_builder.push(I32Store(arg))
+  |> expression.push(I32Store(arg))
 }
 
 pub fn store8(builder: ExpressionBuilder, arg: MemArg) {
   builder
-  |> expression_builder.push(I32Store8(arg))
+  |> expression.push(I32Store8(arg))
 }
 
 pub fn store16(builder: ExpressionBuilder, arg: MemArg) {
   builder
-  |> expression_builder.push(I32Store16(arg))
+  |> expression.push(I32Store16(arg))
 }
 
 pub fn load16s(builder: ExpressionBuilder, arg: MemArg) {
   builder
-  |> expression_builder.push(I32Load16S(arg))
+  |> expression.push(I32Load16S(arg))
 }
 
 pub fn load16u(builder: ExpressionBuilder, arg: MemArg) {
   builder
-  |> expression_builder.push(I32Load16U(arg))
+  |> expression.push(I32Load16U(arg))
 }
 
 pub fn load8s(builder: ExpressionBuilder, arg: MemArg) {
   builder
-  |> expression_builder.push(I32Load8S(arg))
+  |> expression.push(I32Load8S(arg))
 }
 
 pub fn load8u(builder: ExpressionBuilder, arg: MemArg) {
   builder
-  |> expression_builder.push(I32Load8U(arg))
+  |> expression.push(I32Load8U(arg))
 }

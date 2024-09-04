@@ -1,4 +1,3 @@
-import gleam/io
 import gleam/option.{type Option, None, Some}
 import gleam/result
 
@@ -137,7 +136,6 @@ fn do_from_list(l: List(e), tree: FingerTree(e)) {
       Deep(10, Four(a, b, c, d), Single(Node2(e, f)), Four(g, h, i, j))
     Empty, [a, b, c, d, e, f, g, h, i] ->
       Deep(9, Four(a, b, c, d), Single(Node1(e)), Four(f, g, h, i))
-
     Empty, [a, b, c, d, e, f, g, h] ->
       Deep(8, Four(a, b, c, d), Empty, Four(e, f, g, h))
     Empty, [a, b, c, d, e, f, g] ->
@@ -148,6 +146,7 @@ fn do_from_list(l: List(e), tree: FingerTree(e)) {
     Empty, [a, b, c] -> Deep(3, Two(a, b), Empty, One(c))
     Empty, [a, b] -> Deep(2, One(a), Empty, One(b))
     Empty, [a] -> Single(a)
+
     Single(a), [b, c, d, e, f, g, h, ..rest] ->
       do_from_list(rest, Deep(8, Four(a, b, c, d), Empty, Four(e, f, g, h)))
     Single(a), [b, c, d, e, f, g] ->
@@ -157,6 +156,7 @@ fn do_from_list(l: List(e), tree: FingerTree(e)) {
     Single(a), [b, c, d] -> Deep(4, Two(a, b), Empty, Two(c, d))
     Single(a), [b, c] -> Deep(3, Two(a, b), Empty, One(c))
     Single(a), [b] -> Deep(2, One(a), Empty, One(b))
+
     Deep(s, pr, m, Four(a, b, c, d)), [e, f, g, ..rest] ->
       do_from_list(
         rest,
