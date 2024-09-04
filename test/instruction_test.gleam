@@ -287,12 +287,12 @@ pub fn if_test() {
   let block_body = finger_tree.from_list(instruction_list)
 
   let assert Ok(#(
-    structure_types.If(structure_types.VoidBlockType, block_body, None),
+    structure_types.If(structure_types.VoidBlockType, result_body, None),
     <<>>,
   )) =
     types.decode_instruction(<<0x04, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
 
-  block_body
+  result_body
   |> finger_tree.to_list
   |> should.equal(instruction_list)
 
