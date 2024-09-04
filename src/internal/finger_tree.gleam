@@ -1,6 +1,9 @@
+//// Link to FingerTree description: https://www.staff.city.ac.uk/~ross/papers/FingerTree.html
+
 import gleam/option.{type Option, None, Some}
 import gleam/result
 
+/// Finger tree implementation 
 pub opaque type FingerTree(u) {
   Empty
   Single(u)
@@ -305,11 +308,6 @@ pub fn reverse(tree: FingerTree(e)) -> FingerTree(e) {
   reducel(tree, Empty, unshift)
 }
 
-pub fn map(tree: FingerTree(e), f: fn(e) -> v) -> FingerTree(v) {
-  use acc, e <- reducel(tree, Empty)
-  acc |> push(f(e))
-}
-
 pub fn drop(tree: FingerTree(e), n: Int) -> #(FingerTree(e), FingerTree(e)) {
   do_drop(tree, n, Empty)
 }
@@ -567,6 +565,11 @@ fn do_reducel_index_node_tree(
 pub fn map_index(tree: FingerTree(u), f: fn(u, Int) -> v) -> FingerTree(v) {
   use tree, item, index <- reducel_index(tree, Empty)
   tree |> push(f(item, index))
+}
+
+pub fn map(tree: FingerTree(u), f: fn(u) -> v) -> FingerTree(v) {
+  use tree, a <- reducel(tree, Empty)
+  tree |> push(f(a))
 }
 
 pub fn set(tree: FingerTree(u), target_index: Int, target_item: u) {
