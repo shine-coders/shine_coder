@@ -27,7 +27,7 @@ let assert Ok(add_module) =
     rec_type.func_type([val_type.i32, val_type.i32], [val_type.i32]),
   )
   // 4. Tell the wasm module that "function 0" has the type of "type 0"
-  |> module.add_function_type(type_idx_0)
+  |> module.append_function_type_index(type_idx_0)
   // 5. Add the body of the function to the module at function index 0
   |> module.add_code(
     // 5.a Function parameters and locals must be defined here: [..parameters, ..locals]
@@ -72,3 +72,10 @@ Some of these goals are personal,
 3. Validate and Host WASM modules in a Spec Compliant way (not necessarily with performance in mind)
 4. (Personal) - Conquer the WebAssembly GC specification, validation, execution, and building
 5. Make a developer friendly interface for generating abstract WASM modules, manipulating code, and compile them to WASM binaries
+
+## Maintainers
+
+Special Thanks to
+
+Rishit Chaudhary <rishitc@users.noreply.github.com>
+

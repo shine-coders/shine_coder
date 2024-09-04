@@ -16,9 +16,13 @@ pub fn array_new_default(builder: ExpressionBuilder, idx: TypeIDX) {
   |> expression.push(ArrayNewDefault(idx))
 }
 
-pub fn array_new_data(builder: ExpressionBuilder, idx: TypeIDX, data: DataIDX) {
+pub fn array_new_data(
+  builder: ExpressionBuilder,
+  idx: TypeIDX,
+  data_idx: DataIDX,
+) {
   builder
-  |> expression.push(ArrayNewData(idx, data))
+  |> expression.push(ArrayNewData(idx, data_idx))
 }
 
 pub fn array_new_elem(builder: ExpressionBuilder, idx: TypeIDX, elem: ElemIDX) {

@@ -6,6 +6,7 @@ import internal/structure/numbers.{
   type F32, type F64, type I32, type I64, type U32, type V128Value,
 }
 
+/// Get the lane_16 indx nvalue as an integer
 pub fn unwrap_lane_16(val: LaneIDX16) {
   val.val
 }
@@ -23,6 +24,7 @@ pub opaque type LaneIDX16 {
   LaneIDX16(val: Int)
 }
 
+/// Get the lane_2 index value as an integer
 pub fn unwrap_lane_2(val: LaneIDX2) {
   val.val
 }
@@ -40,6 +42,7 @@ pub opaque type LaneIDX2 {
   LaneIDX2(val: Int)
 }
 
+/// Get the lane_4 index value as an integer
 pub fn unwrap_lane_4(val: LaneIDX4) {
   val.val
 }
@@ -57,6 +60,7 @@ pub opaque type LaneIDX4 {
   LaneIDX4(val: Int)
 }
 
+/// Get the lane_8 index value as an integer
 pub fn unwrap_lane_8(val: LaneIDX8) {
   val.val
 }
@@ -153,9 +157,12 @@ pub type RefType {
   NoExternRefType
 }
 
+/// This function is used to check if a refrence type is nullable
 pub fn ref_type_is_nullable(rt: RefType) {
   case rt {
+    // If the ref type is a heap type, check the mutability
     HeapTypeRefType(_, mut) -> mut
+    // Otherwise, all the shorthands are default nullable
     _ -> True
   }
 }
@@ -364,72 +371,15 @@ pub type ExternType {
   GlobalExternType(gt: GlobalType)
 }
 
-/// This function returns all the ExternTypes that are FuncTypes
-/// https://webassembly.github.io/gc/core/syntax/types.html#id5
-pub fn get_extern_func_types(
-  et: FingerTree(ExternType),
-) -> FingerTree(ExternType) {
-  et
-  |> finger_tree.filter(fn(et) {
-    case et {
-      FuncExternType(_) -> True
-      _ -> False
-    }
-  })
-}
-
-/// This function returns all the ExternTypes that are TableTypes
-/// https://webassembly.github.io/gc/core/syntax/types.html#id5
-pub fn get_extern_table_types(
-  et: FingerTree(ExternType),
-) -> FingerTree(ExternType) {
-  et
-  |> finger_tree.filter(fn(et) {
-    case et {
-      TableExternType(_) -> True
-      _ -> False
-    }
-  })
-}
-
-/// This function returns all the ExternTypes that are MemTypes
-/// https://webassembly.github.io/gc/core/syntax/types.html#id5
-pub fn get_extern_memory_types(
-  et: FingerTree(ExternType),
-) -> FingerTree(ExternType) {
-  et
-  |> finger_tree.filter(fn(et) {
-    case et {
-      MemExternType(_) -> True
-      _ -> False
-    }
-  })
-}
-
-/// This function returns all the ExternTypes that are GlobalTypes
-/// https://webassembly.github.io/gc/core/syntax/types.html#id5
-pub fn get_extern_global_types(
-  et: FingerTree(ExternType),
-) -> FingerTree(ExternType) {
-  et
-  |> finger_tree.filter(fn(et) {
-    case et {
-      GlobalExternType(_) -> True
-      _ -> False
-    }
-  })
-}
-
-/// A deftype is a "wrapper", referred to as an "unrolled" type that identifies a SubType.
-/// That SubType is represented by a refrence to a specific recursive type, and then indexing
-/// into that refrence's subtype.
+/// A deftype is a "wrapper", referred to as an "unrolled" recursive type that indexes into the
+/// given RecType's SubTypes. It is used for WebAssembly validation and execution.
 /// Please see: https://webassembly.github.io/gc/core/valid/conventions.html#defined-types
 pub type DefType {
   DefType(rt: RecType, idx: Int)
 }
 
 /// A local type is represented as a value type and wether or not it has been initialized.
-/// Please see: https://webassembly.github.io/gc/core/valid/conventions.html#local-types 
+/// Please see: https://webassembly.github.io/gc/core/valid/conventions.html#local-types
 pub type LocalType {
   LocalType(initialized: Bool, t: ValType)
 }
@@ -961,7 +911,7 @@ pub type Instruction {
 /// This function helps obtain the result type of an instruction in the form of an `InstructionType`.
 /// Instruction types are two sets of "Result Types" that describe the operands and results of a
 /// given instruction, based on the "Context" of the function executing it.
-/// 
+///
 /// TODO: Add more instruction types, and add the Validation Context as a parameter.
 pub fn get_instruction_type(
   instruction: Instruction,
@@ -1591,21 +1541,22 @@ pub fn get_instruction_type(
   }
 }
 
-/// An expression is a "End" [0x0B] terminated sequence of instructions
+/// An expression is a "End" [0x0B] terminated sequence of instructions that describe a
+/// calculated value.
 pub type Expr {
   Expr(insts: FingerTree(Instruction))
 }
 
-/// Expanding a deftype extracts the "CompositeType" of the refrenced subtype to
-/// identify what kind of DefinedType it is. 
+/// Expanding a deftype extracts the "CompositeType" of the referenced subtype it points to.
 pub fn def_type_expand(dt: DefType) {
   let DefType(RecType(st), idx) = dt
   use st <- result.map(st |> finger_tree.get(idx))
   st.ct
 }
 
-/// An import describes a function, table, memory, or global expected to be provided
-/// by the WebAssembly host.
+/// An import describes a function, table, memory, or global that is given to the
+/// WebAssembly module when it is instantiated. Each import is defined by a module
+/// namespace, a name, and a given type.
 pub type Import {
   FuncImport(mod: String, name: String, type_idx: TypeIDX)
   TableImport(mod: String, name: String, table_type: TableType)
@@ -1613,49 +1564,56 @@ pub type Import {
   GlobalImport(mod: String, name: String, global_type: GlobalType)
 }
 
-/// A set of defined locals, (3:u32 i32:valtype), which describe how many of each type 
+/// A set of defined locals, (3:u32 i32:valtype), which describe how many of each type
 /// of local is defined in a given code section.
-/// 
-/// E.X. Locals* -> (3 i32) (2 i64) (1 f32)
-/// 
-/// This sequence of "Locals" expands to  ValType* -> (i32) (i32) (i32) (i64) (i64) (f32)
+///
+/// E.x. Locals* -> (3 i32) (2 i64) (1 f32)
+///
+/// This sequence of "Locals" expands to `ValType* -> (i32) (i32) (i32) (i64) (i64) (f32)`
 /// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#functions
 pub type Locals {
   Locals(count: U32, type_: ValType)
 }
 
-/// A WebAssembly table that is defined by a TableType, and is optionally initialized by
-/// an Expression
+/// A WebAssembly table is defined by a TableType, and is optionally initialized by
+/// an Expression.
 /// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#tables
 pub type Table {
   Table(type_: TableType, init: Option(Expr))
 }
 
-/// A WebAssembly Memory defined by it's memory type
+/// A WebAssembly memory defined by it's memory type, which is just a set of limits.
 /// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#memories
 pub type Mem {
   Mem(type_: MemType)
 }
 
-/// A WebAssembly Global defined by it's global type and constant initializer
+/// A WebAssembly Global defined by a global type and constant initializer expression.
 /// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#globals
 pub type Global {
   Global(type_: GlobalType, init: Expr)
 }
 
-/// A WebAssembly element segment that describes a sequence of Expressions to help initialize tables
+/// A WebAssembly element segment that describes a sequence of Expressions or Function Indexes
+/// used to initialize tables.
 /// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#element-segments
 pub type Elem {
   ElemFuncs(type_: RefType, init: FingerTree(FuncIDX), mode: ElemMode)
   ElemExpressions(type_: RefType, init: FingerTree(Expr), mode: ElemMode)
 }
 
-/// An element segment defines a sequence of expressions, but how those elements are used is
-/// determined by the ElemMode provided as a "SegmentType"
-/// 
-/// - `Passive`: This segment is used to define tables that are not initialized from function calls
-/// - `Active`: This segment is used to define tables that are initialized when the module is instantiated, on a given table, at a specific index
-/// - `Declarative`: This segment is used to define refrences that are created later from code
+/// An element segment defines a sequence of expressions used to describe items that can be used in a
+/// WebAssembly table. There are three different types of element segments, and they describe how the
+/// module and the WebAssembly host utilizes them.
+///
+/// The types are:
+/// - `Passive`: This segment type defines a static vector of expressions that can be used later with
+///              other instructions.
+/// - `Active`: This segment is used to initialize tables when the module is instantiated. Each `Active`
+///             segment contains a table index and a constant expression defining an offset into that table.
+/// - `Declarative`: This segment describes a static vector of expressions that can be used to forward-declare
+///                  references formed in the code with instructions like `ref.func`.
+///
 /// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#element-segments
 pub type ElemMode {
   PassiveElemMode
@@ -1663,8 +1621,8 @@ pub type ElemMode {
   DeclarativeElemMode
 }
 
-/// An export describes an item that is provided back to the WebAssembly host
-/// for later use.
+/// An export describes an item that is available to the host environment when the module is
+/// instantiated.
 /// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#exports
 pub type Export {
   FuncExport(name: String, func_idx: FuncIDX)
@@ -1673,69 +1631,18 @@ pub type Export {
   GlobalExport(name: String, global_idx: GlobalIDX)
 }
 
-/// A convention to identify if and export is a function
-/// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#exports
-pub fn export_is_func(export: Export) -> Bool {
-  case export {
-    FuncExport(_, _) -> True
-    _ -> False
-  }
-}
-
-/// A convention to identify if and export is a table
-/// Conventions: https://webassembly.github.io/gc/core/syntax/modules.html#exports
-pub fn export_is_table(export: Export) -> Bool {
-  case export {
-    TableExport(_, _) -> True
-    _ -> False
-  }
-}
-
-/// A convention to identify if and export is a memory
-/// Conventions: https://webassembly.github.io/gc/core/syntax/modules.html#exports
-pub fn export_is_mem(export: Export) -> Bool {
-  case export {
-    MemExport(_, _) -> True
-    _ -> False
-  }
-}
-
-/// A convention to identify if and export is a global
-/// Conventions: https://webassembly.github.io/gc/core/syntax/modules.html#exports
-pub fn export_is_global(export: Export) -> Bool {
-  case export {
-    GlobalExport(_, _) -> True
-    _ -> False
-  }
-}
-
-/// A convenience method to filter out exports that are not functions
-pub fn funcs(exports: FingerTree(Export)) -> FingerTree(Export) {
-  exports |> finger_tree.filter(export_is_func)
-}
-
-/// A convenience method to filter out exports that are not tables
-pub fn tables(exports: FingerTree(Export)) -> FingerTree(Export) {
-  exports |> finger_tree.filter(export_is_table)
-}
-
-/// A convenience method to filter out exports that are not memories
-pub fn mems(exports: FingerTree(Export)) -> FingerTree(Export) {
-  exports |> finger_tree.filter(export_is_mem)
-}
-
-/// A convenience method to filter out exports that are not globals
-pub fn globals(exports: FingerTree(Export)) -> FingerTree(Export) {
-  exports |> finger_tree.filter(export_is_global)
-}
-
-/// A WebAssembly function defined by it's locals and function body
+/// A WebAssembly function body defined by it's locals and an expression.
 pub type Code {
   Code(locals: FingerTree(Locals), body: Expr)
 }
 
-/// A WebAssembly data segment that describes the "type" of the data segment, the memory it
-/// writes into, the offset into that memory, and the data itself.
+/// Data segments can be used to initialize a range of memory from a static vector of bytes.
+///
+/// The types are:
+/// - `ActiveData`: This segment type defines a static vector of bytes that fill the given memory
+///                 by it's index and at the given offset when the module is instantiated.
+/// - `PassiveData`: This segment type defines a static vector of bytes that can be used later with
+///                  other instructions like table.init_data and memory.init.
 pub type Data {
   ActiveData(mem: MemIDX, offset: Expr, init: BitArray)
   PassiveData(init: BitArray)
@@ -1746,7 +1653,9 @@ pub fn unwrap_local_idx(idx: LocalIDX) {
   idx.id |> numbers.unwrap_u32
 }
 
-/// Return the integer value of a type index
+/// Return the integer value of a type index if it's a concrete index.
+///
+/// Panics if the index is a RecTypeIDX or a DefType
 pub fn unwrap_type_idx(idx: TypeIDX) {
   case idx {
     TypeIDX(idx) -> idx |> numbers.unwrap_u32

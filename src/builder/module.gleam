@@ -12,18 +12,22 @@ import internal/structure/modules.{
 } as structure_modules
 import internal/structure/numbers.{type U32, u32}
 import internal/structure/types.{
-  type Export, type Expr, type FuncIDX, type Global, type GlobalIDX, type Limits,
-  type Locals, type MemIDX, type MemType, type RecType, type RefType, type Table,
-  type TableIDX, type TableType, type TypeIDX, type ValType, ActiveData,
-  ActiveElemMode, Code, Const, DataIDX, DeclarativeElemMode, ElemExpressions,
-  ElemFuncs, ElemIDX, FuncExport, FuncHeapType, FuncIDX, FuncImport,
-  GlobalExport, GlobalIDX, GlobalImport, GlobalType, HeapTypeRefType, LabelIDX,
-  Limits, LocalIDX, Locals, MemExport, MemIDX, MemImport, MemType, PassiveData,
-  PassiveElemMode, TableExport, TableIDX, TableImport, TableType, TypeIDX, Var,
+  type Export, type Expr, type FieldType, type FuncIDX, type Global,
+  type GlobalIDX, type Limits, type Locals, type MemIDX, type MemType,
+  type RecType, type RefType, type Table, type TableIDX, type TableType,
+  type TypeIDX, type ValType, ActiveData, ActiveElemMode, ArrayCompositeType,
+  ArrayType, Code, Const, DataIDX, DeclarativeElemMode, ElemExpressions,
+  ElemFuncs, ElemIDX, FieldType, FuncCompositeType, FuncExport, FuncHeapType,
+  FuncIDX, FuncImport, FuncType, Global, GlobalExport, GlobalIDX, GlobalImport,
+  GlobalType, HeapTypeRefType, LabelIDX, Limits, LocalIDX, Locals, MemExport,
+  MemIDX, MemImport, MemType, PassiveData, PassiveElemMode, RecType,
+  StructCompositeType, StructType, SubType, Table, TableExport, TableIDX,
+  TableImport, TableType, TypeIDX, Var,
 }
 
 pub const new = structure_modules.binary_module_new
 
+/// Add a custom section to the module after the last modified section.
 pub fn custom_section(module: BinaryModule, name: String, data: BitArray) {
   case module {
     BinaryModule(
@@ -451,6 +455,7 @@ fn add_to_optional_list(items: Option(FingerTree(u)), item: u) {
   }
 }
 
+/// Add a new concrete Recursive Type to the TypeSection.
 pub fn add_type(module: BinaryModule, type_: RecType) {
   let BinaryModule(types: types, ..) = module
   case types {
@@ -465,6 +470,60 @@ pub fn add_type(module: BinaryModule, type_: RecType) {
         types: Some(TypeSection(finger_tree.push(types, type_))),
       )
   }
+}
+
+/// Add a new concrete FuncType to the TypeSection.
+pub fn add_func_type(
+  module: BinaryModule,
+  parameters: List(ValType),
+  results: List(ValType),
+) {
+  let func_type =
+    SubType(
+      False,
+      finger_tree.empty,
+      FuncCompositeType(FuncType(
+        finger_tree.from_list(parameters),
+        finger_tree.from_list(results),
+      )),
+    )
+
+  add_type(module, RecType(finger_tree.single(func_type)))
+}
+
+/// Add a new concrete ArrayType to the TypeSection
+pub fn add_array_type(module: BinaryModule, element_type: FieldType) {
+  let array_type =
+    SubType(
+      False,
+      finger_tree.empty,
+      ArrayCompositeType(ArrayType(element_type)),
+    )
+  add_type(module, RecType(finger_tree.single(array_type)))
+}
+
+// Add a new StructType to the TypeSection
+pub fn add_struct_type(module: BinaryModule, fields: List(FieldType)) {
+  let struct_type =
+    SubType(
+      False,
+      finger_tree.empty,
+      StructCompositeType(StructType(finger_tree.from_list(fields))),
+    )
+
+  add_type(module, RecType(finger_tree.single(struct_type)))
+}
+
+// Add a new StructType to the TypeSection that is marked as "final"
+pub fn add_final_struct_type(module: BinaryModule, fields: List(FieldType)) {
+  let struct_type =
+    SubType(
+      True,
+      finger_tree.empty,
+      StructCompositeType(StructType(finger_tree.from_list(fields))),
+    )
+
+  add_type(module, RecType(finger_tree.single(struct_type)))
 }
 
 /// Import a function from the host. The module_name and name are used to identify the
@@ -586,7 +645,7 @@ pub fn import_table(
 
 /// Import a memory from the host. The module_name and name are used to identify the
 /// import as the host specifies it. The type of the memory is defined by a MemType.
-/// 
+///
 /// Note: There can only be one memory per module.
 pub fn import_memory(
   module: BinaryModule,
@@ -623,7 +682,17 @@ pub fn import_memory(
   }
 }
 
-pub fn add_function_type(module: BinaryModule, type_: TypeIDX) {
+/// Appends a function type, defined by it's index, into the function signature
+/// section. This is not the same as adding a concrete function type to the module's type section.
+/// It merely describes the signature of a given function in the import and code section.
+///
+/// Note: The function type index must be absolute, and the function type must already be defined
+/// in the type section in order for the module to be valid.
+///
+/// Every function signature must be defined in the function section.
+///
+/// Panics if the index is a RecTypeIDX or a DefType
+pub fn append_function_type_index(module: BinaryModule, type_: TypeIDX) {
   case module, type_ {
     BinaryModule(functions: None, ..), TypeIDX(_) ->
       BinaryModule(
@@ -641,8 +710,17 @@ pub fn add_function_type(module: BinaryModule, type_: TypeIDX) {
   }
 }
 
-pub fn add_table(module: BinaryModule, table: Table) {
+/// Add a WebAssembly table to the module defined by it's reference type, it's minimum and optional
+/// maximum size, and an optional constant initializer expression.
+pub fn add_table(
+  module: BinaryModule,
+  ref_type: RefType,
+  min: U32,
+  max: Option(U32),
+  init: Option(Expr),
+) {
   let BinaryModule(tables: tables, ..) = module
+  let table = Table(TableType(ref_type, Limits(min, max)), init)
   case tables {
     None ->
       BinaryModule(
@@ -657,6 +735,9 @@ pub fn add_table(module: BinaryModule, table: Table) {
   }
 }
 
+/// Add a WebAssembly memory to the module defined by it's memory type.
+///
+/// Note: Currently, only one memory is allowed per module, as described in the WebAssembly spec.
 pub fn add_memory(module: BinaryModule, memory: MemType) {
   let BinaryModule(memories: memories, ..) = module
   case memories {
@@ -669,8 +750,18 @@ pub fn add_memory(module: BinaryModule, memory: MemType) {
   }
 }
 
-pub fn add_global(module: BinaryModule, global: Global) {
+/// Add a WebAssembly global to the module defined by it's global type, mutability option
+/// and initializer expression.
+pub fn add_global(module: BinaryModule, vt: ValType, mut: Bool, init: Expr) {
   let BinaryModule(globals: globals, ..) = module
+  let global =
+    Global(
+      GlobalType(vt, case mut {
+        True -> Var
+        False -> Const
+      }),
+      init,
+    )
   case globals {
     None ->
       BinaryModule(
@@ -693,6 +784,8 @@ fn unique_export_name(acc: Set(String), export: Export) {
   }
 }
 
+/// Export a function to the module. The function is given by it's index into the function section,
+/// and it's name.
 pub fn export_func(module: BinaryModule, name: String, func: FuncIDX) {
   let BinaryModule(exports: exports, ..) = module
   case exports {
@@ -718,6 +811,8 @@ pub fn export_func(module: BinaryModule, name: String, func: FuncIDX) {
   }
 }
 
+/// Export a table to the module. The table is given by it's index into the table section,
+/// and it's name.
 pub fn export_table(module: BinaryModule, name: String, table: TableIDX) {
   let BinaryModule(exports: exports, ..) = module
   case exports {
@@ -745,6 +840,11 @@ pub fn export_table(module: BinaryModule, name: String, table: TableIDX) {
   }
 }
 
+/// Export a memory to the module. The memory is given by it's index into the memory section,
+/// and it's name.
+/// 
+/// Note: Currently, only one memory is allowed per module, as described in the WebAssembly spec.
+/// https://webassembly.github.io/gc/core/syntax/modules.html#memories
 pub fn export_memory(module: BinaryModule, name: String, memory: MemIDX) {
   let BinaryModule(exports: exports, ..) = module
   case exports {
@@ -772,6 +872,8 @@ pub fn export_memory(module: BinaryModule, name: String, memory: MemIDX) {
   }
 }
 
+/// Export a global to the module. The global is given by it's index into the global section,
+/// and it's name.
 pub fn export_global(module: BinaryModule, name: String, global: GlobalIDX) {
   let BinaryModule(exports: exports, ..) = module
   case exports {
@@ -799,10 +901,13 @@ pub fn export_global(module: BinaryModule, name: String, global: GlobalIDX) {
   }
 }
 
+/// Set the start function for the module.
 pub fn set_start(module: BinaryModule, func: FuncIDX) {
   BinaryModule(..module, start: Some(StartSection(func)))
 }
 
+/// Add an active element segment with the given list of function indexes to the module.
+/// It will initialize the given table at the given offset when the module is instantiated.
 pub fn active_funcs_element_segment(
   module: BinaryModule,
   offset: Expr,
@@ -841,6 +946,7 @@ pub fn active_funcs_element_segment(
   }
 }
 
+/// Add a passive element segment with the given list of function indexes to the module.
 pub fn passive_funcs_element_segment(module: BinaryModule, funcs: List(FuncIDX)) {
   let BinaryModule(elements: elements, ..) = module
   case elements {
@@ -874,6 +980,7 @@ pub fn passive_funcs_element_segment(module: BinaryModule, funcs: List(FuncIDX))
   }
 }
 
+/// Add a declarative element segment with the given list of function indexes to the module.
 pub fn declarative_funcs_element_segment(
   module: BinaryModule,
   funcs: List(FuncIDX),
@@ -910,6 +1017,9 @@ pub fn declarative_funcs_element_segment(
   }
 }
 
+/// Add an active element segment with the given list of expressions to the module.
+/// It will initialize the given table at the given offset when the module is instantiated.
+/// The expressions must all match the given reference type.
 pub fn active_element_segment(
   module: BinaryModule,
   ref_type: RefType,
@@ -950,6 +1060,8 @@ pub fn active_element_segment(
   }
 }
 
+/// Add a passive element segment with the given list of expressions to the module.
+/// The expressions must all match the given reference type.
 pub fn passive_element_segment(
   module: BinaryModule,
   ref_type: RefType,
@@ -988,6 +1100,8 @@ pub fn passive_element_segment(
   }
 }
 
+/// Add a declarative element segment with the given list of expressions to the module.
+/// The expressions must all match the given reference type.
 pub fn declarative_element_segment(
   module: BinaryModule,
   ref_type: RefType,
@@ -1056,7 +1170,9 @@ fn do_concatenate_locals(
   }
 }
 
-/// Add a code function to the code section.
+/// Add the function's definition to the code section. The given locals must be in order
+/// and match the function section's parameters, followed by any local variables needed
+/// by the function.
 pub fn add_code(module: BinaryModule, locals: List(ValType), body: Expr) {
   let BinaryModule(code: code, ..) = module
 
@@ -1076,6 +1192,8 @@ pub fn add_code(module: BinaryModule, locals: List(ValType), body: Expr) {
   }
 }
 
+/// Add an active data segment to the module. The data will initialize the given
+/// memory index at the given offset when the module is instantiated.
 pub fn add_active_data(
   module: BinaryModule,
   mem_idx: MemIDX,
@@ -1104,6 +1222,8 @@ pub fn add_active_data(
   }
 }
 
+/// Add a passive data segment to the module. A passive element segment's elements
+/// can be copied to a table using the WebAssembly `table.init` instruction.
 pub fn add_passive_data(module: BinaryModule, data: BitArray) {
   let BinaryModule(data: data_section, ..) = module
   case data_section {
@@ -1122,10 +1242,13 @@ pub fn add_passive_data(module: BinaryModule, data: BitArray) {
   }
 }
 
+/// Set the number of data segments in the module. This section is not necessary, but is
+/// useful for validation.
 pub fn set_data_count(module: BinaryModule, count: U32) {
   BinaryModule(..module, data_count: Some(DataCountSection(count)))
 }
 
+/// Create a type index, as long as the index is a valid U32 value.
 pub fn type_idx(idx: Int) {
   case u32(idx) {
     Ok(idx) -> Ok(TypeIDX(idx))
@@ -1133,6 +1256,7 @@ pub fn type_idx(idx: Int) {
   }
 }
 
+/// Create a function index, as long as the index is a valid U32 value.
 pub fn local_idx(idx: Int) {
   case u32(idx) {
     Ok(idx) -> Ok(LocalIDX(idx))
@@ -1140,6 +1264,7 @@ pub fn local_idx(idx: Int) {
   }
 }
 
+/// Create a global index, as long as the index is a valid U32 value.
 pub fn global_idx(idx: Int) {
   case u32(idx) {
     Ok(idx) -> Ok(GlobalIDX(idx))
@@ -1147,6 +1272,7 @@ pub fn global_idx(idx: Int) {
   }
 }
 
+/// Create a table index, as long as the index is a valid U32 value.
 pub fn table_idx(idx: Int) {
   case u32(idx) {
     Ok(idx) -> Ok(TableIDX(idx))
@@ -1154,6 +1280,7 @@ pub fn table_idx(idx: Int) {
   }
 }
 
+/// Create a memory index, as long as the index is a valid U32 value.
 pub fn mem_idx(idx: Int) {
   case u32(idx) {
     Ok(idx) -> Ok(MemIDX(idx))
@@ -1161,6 +1288,7 @@ pub fn mem_idx(idx: Int) {
   }
 }
 
+/// Create an element index, as long as the index is a valid U32 value.
 pub fn elem_idx(idx: Int) {
   case u32(idx) {
     Ok(idx) -> Ok(ElemIDX(idx))
@@ -1168,6 +1296,7 @@ pub fn elem_idx(idx: Int) {
   }
 }
 
+/// Create a data index, as long as the index is a valid U32 value.
 pub fn data_idx(idx: Int) {
   case u32(idx) {
     Ok(idx) -> Ok(DataIDX(idx))
@@ -1175,6 +1304,7 @@ pub fn data_idx(idx: Int) {
   }
 }
 
+/// Create a label index, as long as the index is a valid U32 value.
 pub fn label_idx(idx: Int) {
   case u32(idx) {
     Ok(idx) -> Ok(LabelIDX(idx))
@@ -1182,6 +1312,7 @@ pub fn label_idx(idx: Int) {
   }
 }
 
+/// Create a function index, as long as the index is a valid U32 value.
 pub fn func_idx(idx: Int) {
   case u32(idx) {
     Ok(idx) -> Ok(FuncIDX(idx))
@@ -1189,6 +1320,24 @@ pub fn func_idx(idx: Int) {
   }
 }
 
+/// Encode the module into a BitArray, as long as the module is syntatically correctly.
+/// Modules encoded with this function will not be validated. Please use the `validate`
+/// function to validate the module before encoding to ensure that the module is usable.
+///
+/// Note: The validate function has not been implemented yet, and is not provided as part
+/// of the MVP of shine_coder
 pub fn encode(module: BinaryModule) {
   modules.encode_module(module)
+}
+
+/// Decode the module from a BitArray.
+///
+/// This method will fail if the module is invalid.
+///
+/// It returns:
+///
+/// - Ok(#(the_module, unparsed_bits))
+/// - Error(message)
+pub fn decode(module: BitArray) {
+  modules.decode_module(module)
 }

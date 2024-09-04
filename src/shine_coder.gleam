@@ -17,7 +17,7 @@ pub fn main() {
     |> module.add_type(
       rec_type.func_type([val_type.i32, val_type.i32], [val_type.i32]),
     )
-    |> module.add_function_type(type_idx_0)
+    |> module.append_function_type_index(type_idx_0)
     |> module.add_code(
       [val_type.i32, val_type.i32],
       expression.new()
