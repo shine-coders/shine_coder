@@ -3,6 +3,7 @@ import gleam/bytes_builder
 import gleam/option.{None, Some}
 import gleam/result
 import gleam/string
+import gleeunit/should
 import ieee_float
 import internal/binary/types
 import internal/finger_tree
@@ -114,13 +115,30 @@ pub fn br_table_test() {
   let label_b = structure_types.LabelIDX(label_b)
   let label_c = structure_types.LabelIDX(label_c)
 
-  let labels =
-    [label_a, label_b, label_c]
-    |> finger_tree.from_list
+  let label_list = [label_a, label_b, label_c]
+  let labels = finger_tree.from_list(label_list)
 
-  round_trip(structure_types.BrTable(labels, label_default), <<
-    0x0E, 3, 1, 2, 3, 42,
-  >>)
+  let assert Ok(#(
+    structure_types.BrTable(actual_labels, actual_label_default),
+    <<>>,
+  )) = types.decode_instruction(<<0x0E, 3, 1, 2, 3, 42>>)
+
+  actual_labels
+  |> finger_tree.to_list
+  |> should.equal(label_list)
+
+  actual_label_default
+  |> should.equal(label_default)
+
+  let assert Ok(builder) =
+    types.encode_instruction(
+      bytes_builder.new(),
+      structure_types.BrTable(labels, label_default),
+    )
+
+  builder
+  |> bytes_builder.to_bit_array
+  |> should.equal(<<0x0E, 3, 1, 2, 3, 42>>)
 }
 
 pub fn return_test() {
@@ -185,14 +203,34 @@ pub fn block_test() {
   let i32_add = structure_types.I32Add
   let drop = structure_types.Drop
 
-  let block_body =
-    structure_types.Expr(
-      finger_tree.from_list([local_get1, local_get2, i32_add, drop]),
+  let instruction_list = [local_get1, local_get2, i32_add, drop]
+  let block_body = structure_types.Expr(finger_tree.from_list(instruction_list))
+
+  let assert Ok(#(
+    structure_types.Block(
+      actual_block_type,
+      structure_types.Expr(actual_block_body),
+    ),
+    <<>>,
+  )) =
+    types.decode_instruction(<<0x02, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
+
+  actual_block_type
+  |> should.equal(structure_types.VoidBlockType)
+
+  actual_block_body
+  |> finger_tree.to_list
+  |> should.equal(instruction_list)
+
+  let assert Ok(builder) =
+    types.encode_instruction(
+      bytes_builder.new(),
+      structure_types.Block(structure_types.VoidBlockType, block_body),
     )
 
-  round_trip(structure_types.Block(structure_types.VoidBlockType, block_body), <<
-    0x02, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B,
-  >>)
+  builder
+  |> bytes_builder.to_bit_array
+  |> should.equal(<<0x02, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
 }
 
 // https://webassembly.github.io/gc/core/binary/instructions.html#control-instructions
@@ -206,14 +244,33 @@ pub fn loop_test() {
   let i32_add = structure_types.I32Add
   let drop = structure_types.Drop
 
-  let block_body =
-    structure_types.Expr(
-      finger_tree.from_list([local_get1, local_get2, i32_add, drop]),
+  let instruction_list = [local_get1, local_get2, i32_add, drop]
+
+  let assert Ok(#(
+    structure_types.Loop(
+      structure_types.VoidBlockType,
+      structure_types.Expr(block_body),
+    ),
+    <<>>,
+  )) =
+    types.decode_instruction(<<0x03, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
+
+  block_body
+  |> finger_tree.to_list
+  |> should.equal(instruction_list)
+
+  let assert Ok(builder) =
+    types.encode_instruction(
+      bytes_builder.new(),
+      structure_types.Loop(
+        structure_types.VoidBlockType,
+        structure_types.Expr(instruction_list |> finger_tree.from_list),
+      ),
     )
 
-  round_trip(structure_types.Loop(structure_types.VoidBlockType, block_body), <<
-    0x03, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B,
-  >>)
+  builder
+  |> bytes_builder.to_bit_array
+  |> should.equal(<<0x03, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
 }
 
 pub fn if_test() {
@@ -226,13 +283,28 @@ pub fn if_test() {
   let i32_add = structure_types.I32Add
   let drop = structure_types.Drop
 
-  let block_body =
-    finger_tree.from_list([local_get1, local_get2, i32_add, drop])
+  let instruction_list = [local_get1, local_get2, i32_add, drop]
+  let block_body = finger_tree.from_list(instruction_list)
 
-  round_trip(
+  let assert Ok(#(
     structure_types.If(structure_types.VoidBlockType, block_body, None),
-    <<0x04, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>,
-  )
+    <<>>,
+  )) =
+    types.decode_instruction(<<0x04, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
+
+  block_body
+  |> finger_tree.to_list
+  |> should.equal(instruction_list)
+
+  let assert Ok(builder) =
+    types.encode_instruction(
+      bytes_builder.new(),
+      structure_types.If(structure_types.VoidBlockType, block_body, None),
+    )
+
+  builder
+  |> bytes_builder.to_bit_array
+  |> should.equal(<<0x04, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
 }
 
 pub fn if_else_test() {
@@ -806,17 +878,29 @@ pub fn select_test() {
 }
 
 pub fn select_t_test() {
-  let val_types =
-    finger_tree.from_list([
-      structure_types.I32ValType,
-      structure_types.I64ValType,
-      structure_types.F32ValType,
-      structure_types.F64ValType,
-    ])
+  let val_types_list = [
+    structure_types.I32ValType,
+    structure_types.I64ValType,
+    structure_types.F32ValType,
+    structure_types.F64ValType,
+  ]
+  let val_types = finger_tree.from_list(val_types_list)
 
-  round_trip(structure_types.SelectT(val_types), <<
-    0x1C, 0x04, 0x7F, 0x7E, 0x7D, 0x7C,
-  >>)
+  let assert Ok(#(structure_types.SelectT(actual_val_types), <<>>)) =
+    types.decode_instruction(<<0x1C, 0x04, 0x7F, 0x7E, 0x7D, 0x7C>>)
+
+  actual_val_types
+  |> finger_tree.to_list
+  |> should.equal(val_types_list)
+
+  let assert Ok(builder) =
+    types.encode_instruction(
+      bytes_builder.new(),
+      structure_types.SelectT(val_types),
+    )
+  builder
+  |> bytes_builder.to_bit_array
+  |> should.equal(<<0x1C, 0x04, 0x7F, 0x7E, 0x7D, 0x7C>>)
 }
 
 pub fn local_get_test() {

@@ -1,19 +1,24 @@
-import gleam/dict
 import gleam/option.{type Option, None, Some}
 import gleam/set.{type Set}
 import internal/finger_tree.{type FingerTree}
 import internal/structure/modules.{
   type BinaryModule, type CustomSection, type ExportSection,
   type FunctionSection, type GlobalSection, type MemorySection,
-  type TableSection, type TypeSection, BinaryModule, CustomSection,
-  ExportSection, FunctionSection, GlobalSection, ImportSection, MemorySection,
-  TableSection, TypeSection,
+  type TableSection, type TypeSection, BinaryModule, CodeSection, CustomSection,
+  DataCountSection, DataSection, ElementSection, ExportSection, FunctionSection,
+  GlobalSection, ImportSection, MemorySection, StartSection, TableSection,
+  TypeSection,
 }
+import internal/structure/numbers.{type U32, u32}
 import internal/structure/types.{
-  type Export, type FuncIDX, type Global, type GlobalIDX, type Import,
-  type MemIDX, type MemType, type RecType, type Table, type TableIDX,
-  type TypeIDX, FuncExport, FuncIDX, GlobalExport, MemExport, TableExport,
-  TypeIDX,
+  type Export, type Expr, type FuncIDX, type Global, type GlobalIDX, type Locals,
+  type MemIDX, type MemType, type RecType, type RefType, type Table,
+  type TableIDX, type TableType, type TypeIDX, type ValType, ActiveData,
+  ActiveElemMode, Code, Const, DataIDX, DeclarativeElemMode, ElemExpressions,
+  ElemFuncs, ElemIDX, FuncExport, FuncHeapType, FuncIDX, FuncImport,
+  GlobalExport, GlobalIDX, GlobalImport, GlobalType, HeapTypeRefType, LabelIDX,
+  LocalIDX, Locals, MemExport, MemIDX, MemImport, PassiveData, PassiveElemMode,
+  TableExport, TableIDX, TableImport, TableType, TypeIDX, Var,
 }
 
 pub const new = modules.binary_module_new
@@ -461,18 +466,143 @@ pub fn add_type(module: BinaryModule, type_: RecType) {
   }
 }
 
-pub fn add_import(module: BinaryModule, import_: Import) {
+/// Import a function from the host. The module_name and name are used to identify the
+/// import as the host specifies it. The type of the function is defined by a TypeIDX that
+/// points into the TypeSection. Type indexes at this point *must* be absolute, or this
+/// method panics.
+pub fn import_func(
+  module: BinaryModule,
+  module_name: String,
+  name: String,
+  type_: TypeIDX,
+) {
+  let BinaryModule(imports: imports, ..) = module
+  case imports, type_ {
+    None, TypeIDX(_) ->
+      BinaryModule(
+        ..module,
+        imports: Some(
+          ImportSection(
+            finger_tree.single(FuncImport(module_name, name, type_)),
+          ),
+        ),
+      )
+
+    Some(ImportSection(imports)), TypeIDX(_) ->
+      BinaryModule(
+        ..module,
+        imports: Some(
+          ImportSection(finger_tree.push(
+            imports,
+            FuncImport(module_name, name, type_),
+          )),
+        ),
+      )
+
+    _, _ -> panic as "Invalid type index. Type Index must be absolute."
+  }
+}
+
+/// Import a global from the host. The module_name and name are used to identify the
+/// import as the host specifies it. The type of the global is defined by a ValType and
+/// whether it is mutable or not.
+pub fn import_global(
+  module: BinaryModule,
+  module_name: String,
+  name: String,
+  vt: ValType,
+  mut: Bool,
+) {
+  let BinaryModule(imports: imports, ..) = module
+  let mut = case mut {
+    True -> Var
+    False -> Const
+  }
+  case imports {
+    None ->
+      BinaryModule(
+        ..module,
+        imports: Some(
+          ImportSection(
+            finger_tree.single(GlobalImport(
+              module_name,
+              name,
+              GlobalType(vt, mut),
+            )),
+          ),
+        ),
+      )
+    Some(ImportSection(imports)) ->
+      BinaryModule(
+        ..module,
+        imports: Some(
+          ImportSection(finger_tree.push(
+            imports,
+            GlobalImport(module_name, name, GlobalType(vt, mut)),
+          )),
+        ),
+      )
+  }
+}
+
+/// Import a table from the host. The module_name and name are used to identify the
+/// import as the host specifies it. The type of the table is defined by a TableType.
+pub fn import_table(
+  module: BinaryModule,
+  module_name: String,
+  name: String,
+  tt: TableType,
+) {
   let BinaryModule(imports: imports, ..) = module
   case imports {
     None ->
       BinaryModule(
         ..module,
-        imports: Some(ImportSection(finger_tree.single(import_))),
+        imports: Some(
+          ImportSection(finger_tree.single(TableImport(module_name, name, tt))),
+        ),
       )
     Some(ImportSection(imports)) ->
       BinaryModule(
         ..module,
-        imports: Some(ImportSection(finger_tree.push(imports, import_))),
+        imports: Some(
+          ImportSection(finger_tree.push(
+            imports,
+            TableImport(module_name, name, tt),
+          )),
+        ),
+      )
+  }
+}
+
+/// Import a memory from the host. The module_name and name are used to identify the
+/// import as the host specifies it. The type of the memory is defined by a MemType.
+/// 
+/// Note: There can only be one memory per module.
+pub fn import_memory(
+  module: BinaryModule,
+  module_name: String,
+  name: String,
+  mt: MemType,
+) {
+  let BinaryModule(imports: imports, ..) = module
+  case imports {
+    None ->
+      BinaryModule(
+        ..module,
+        imports: Some(
+          ImportSection(finger_tree.single(MemImport(module_name, name, mt))),
+        ),
+      )
+    Some(ImportSection(imports)) ->
+      BinaryModule(
+        ..module,
+        imports: Some(
+          ImportSection(finger_tree.push(
+            imports,
+            MemImport(module_name, name, mt),
+          )),
+        ),
       )
   }
 }
@@ -650,5 +780,395 @@ pub fn export_global(module: BinaryModule, name: String, global: GlobalIDX) {
         ),
       )
     }
+  }
+}
+
+pub fn set_start(module: BinaryModule, func: FuncIDX) {
+  BinaryModule(..module, start: Some(StartSection(func)))
+}
+
+pub fn active_funcs_element_segment(
+  module: BinaryModule,
+  offset: Expr,
+  table_index: TableIDX,
+  funcs: List(FuncIDX),
+) {
+  let BinaryModule(elements: elements, ..) = module
+  case elements {
+    None ->
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(
+            finger_tree.single(ElemFuncs(
+              HeapTypeRefType(FuncHeapType, False),
+              finger_tree.from_list(funcs),
+              ActiveElemMode(table_index, offset),
+            )),
+          ),
+        ),
+      )
+    Some(ElementSection(elements)) ->
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(finger_tree.push(
+            elements,
+            ElemFuncs(
+              HeapTypeRefType(FuncHeapType, False),
+              finger_tree.from_list(funcs),
+              ActiveElemMode(table_index, offset),
+            ),
+          )),
+        ),
+      )
+  }
+}
+
+pub fn passive_funcs_element_segment(module: BinaryModule, funcs: List(FuncIDX)) {
+  let BinaryModule(elements: elements, ..) = module
+  case elements {
+    None ->
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(
+            finger_tree.single(ElemFuncs(
+              HeapTypeRefType(FuncHeapType, False),
+              finger_tree.from_list(funcs),
+              PassiveElemMode,
+            )),
+          ),
+        ),
+      )
+    Some(ElementSection(elements)) ->
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(finger_tree.push(
+            elements,
+            ElemFuncs(
+              HeapTypeRefType(FuncHeapType, False),
+              finger_tree.from_list(funcs),
+              PassiveElemMode,
+            ),
+          )),
+        ),
+      )
+  }
+}
+
+pub fn declarative_funcs_element_segment(
+  module: BinaryModule,
+  funcs: List(FuncIDX),
+) {
+  let BinaryModule(elements: elements, ..) = module
+  case elements {
+    None ->
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(
+            finger_tree.single(ElemFuncs(
+              HeapTypeRefType(FuncHeapType, False),
+              finger_tree.from_list(funcs),
+              DeclarativeElemMode,
+            )),
+          ),
+        ),
+      )
+    Some(ElementSection(elements)) ->
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(finger_tree.push(
+            elements,
+            ElemFuncs(
+              HeapTypeRefType(FuncHeapType, False),
+              finger_tree.from_list(funcs),
+              DeclarativeElemMode,
+            ),
+          )),
+        ),
+      )
+  }
+}
+
+pub fn active_element_segment(
+  module: BinaryModule,
+  ref_type: RefType,
+  offset: Expr,
+  table_index: TableIDX,
+  exprs: List(Expr),
+) {
+  let BinaryModule(elements: elements, ..) = module
+  case elements {
+    None -> {
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(
+            finger_tree.single(ElemExpressions(
+              ref_type,
+              finger_tree.from_list(exprs),
+              ActiveElemMode(table_index, offset),
+            )),
+          ),
+        ),
+      )
+    }
+    Some(ElementSection(elements)) ->
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(finger_tree.push(
+            elements,
+            ElemExpressions(
+              ref_type,
+              finger_tree.from_list(exprs),
+              ActiveElemMode(table_index, offset),
+            ),
+          )),
+        ),
+      )
+  }
+}
+
+pub fn passive_element_segment(
+  module: BinaryModule,
+  ref_type: RefType,
+  exprs: List(Expr),
+) {
+  let BinaryModule(elements: elements, ..) = module
+  case elements {
+    None -> {
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(
+            finger_tree.single(ElemExpressions(
+              ref_type,
+              finger_tree.from_list(exprs),
+              PassiveElemMode,
+            )),
+          ),
+        ),
+      )
+    }
+    Some(ElementSection(elements)) ->
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(finger_tree.push(
+            elements,
+            ElemExpressions(
+              ref_type,
+              finger_tree.from_list(exprs),
+              PassiveElemMode,
+            ),
+          )),
+        ),
+      )
+  }
+}
+
+pub fn declarative_element_segment(
+  module: BinaryModule,
+  ref_type: RefType,
+  exprs: List(Expr),
+) {
+  let BinaryModule(elements: elements, ..) = module
+  case elements {
+    None -> {
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(
+            finger_tree.single(ElemExpressions(
+              ref_type,
+              finger_tree.from_list(exprs),
+              DeclarativeElemMode,
+            )),
+          ),
+        ),
+      )
+    }
+    Some(ElementSection(elements)) ->
+      BinaryModule(
+        ..module,
+        elements: Some(
+          ElementSection(finger_tree.push(
+            elements,
+            ElemExpressions(
+              ref_type,
+              finger_tree.from_list(exprs),
+              DeclarativeElemMode,
+            ),
+          )),
+        ),
+      )
+  }
+}
+
+fn concatenate_locals(locals: List(ValType)) {
+  case locals {
+    [] -> finger_tree.new()
+    [a, ..rest] -> do_concatenate_locals(rest, finger_tree.new(), #(1, a))
+  }
+}
+
+fn do_concatenate_locals(
+  locals: List(ValType),
+  acc: FingerTree(Locals),
+  current: #(Int, ValType),
+) {
+  case locals, current {
+    [val_type, ..rest], #(count, current_type) if val_type == current_type ->
+      do_concatenate_locals(rest, acc, #(count + 1, val_type))
+    [val_type, ..rest], #(count, current_type) -> {
+      let assert Ok(count) = u32(count)
+
+      let locals = Locals(count, current_type)
+      do_concatenate_locals(rest, finger_tree.push(acc, locals), #(1, val_type))
+    }
+    [], #(count, current_type) -> {
+      let assert Ok(count) = u32(count)
+
+      let locals = Locals(count, current_type)
+      finger_tree.push(acc, locals)
+    }
+  }
+}
+
+/// Add a code function to the code section.
+pub fn add_code(module: BinaryModule, locals: List(ValType), body: Expr) {
+  let BinaryModule(code: code, ..) = module
+
+  let locals = concatenate_locals(locals)
+
+  case code {
+    None ->
+      BinaryModule(
+        ..module,
+        code: Some(CodeSection(finger_tree.single(Code(locals, body)))),
+      )
+    Some(CodeSection(code)) ->
+      BinaryModule(
+        ..module,
+        code: Some(CodeSection(finger_tree.push(code, Code(locals, body)))),
+      )
+  }
+}
+
+pub fn add_active_data(
+  module: BinaryModule,
+  mem_idx: MemIDX,
+  offset: Expr,
+  data: BitArray,
+) {
+  let BinaryModule(data: data_section, ..) = module
+  case data_section {
+    None ->
+      BinaryModule(
+        ..module,
+        data: Some(
+          DataSection(finger_tree.single(ActiveData(mem_idx, offset, data))),
+        ),
+      )
+    Some(DataSection(data_section)) ->
+      BinaryModule(
+        ..module,
+        data: Some(
+          DataSection(finger_tree.push(
+            data_section,
+            ActiveData(mem_idx, offset, data),
+          )),
+        ),
+      )
+  }
+}
+
+pub fn add_passive_data(module: BinaryModule, data: BitArray) {
+  let BinaryModule(data: data_section, ..) = module
+  case data_section {
+    None ->
+      BinaryModule(
+        ..module,
+        data: Some(DataSection(finger_tree.single(PassiveData(data)))),
+      )
+    Some(DataSection(data_section)) ->
+      BinaryModule(
+        ..module,
+        data: Some(
+          DataSection(finger_tree.push(data_section, PassiveData(data))),
+        ),
+      )
+  }
+}
+
+pub fn set_data_count(module: BinaryModule, count: U32) {
+  BinaryModule(..module, data_count: Some(DataCountSection(count)))
+}
+
+pub fn type_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(TypeIDX(idx))
+    Error(msg) -> Error(msg)
+  }
+}
+
+pub fn local_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(LocalIDX(idx))
+    Error(msg) -> Error(msg)
+  }
+}
+
+pub fn global_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(GlobalIDX(idx))
+    Error(msg) -> Error(msg)
+  }
+}
+
+pub fn table_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(TableIDX(idx))
+    Error(msg) -> Error(msg)
+  }
+}
+
+pub fn mem_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(MemIDX(idx))
+    Error(msg) -> Error(msg)
+  }
+}
+
+pub fn elem_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(ElemIDX(idx))
+    Error(msg) -> Error(msg)
+  }
+}
+
+pub fn data_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(DataIDX(idx))
+    Error(msg) -> Error(msg)
+  }
+}
+
+pub fn label_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(LabelIDX(idx))
+    Error(msg) -> Error(msg)
+  }
+}
+
+pub fn func_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(FuncIDX(idx))
+    Error(msg) -> Error(msg)
   }
 }

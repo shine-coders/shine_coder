@@ -1,3 +1,4 @@
+import gleam/io
 import gleam/option.{type Option, None, Some}
 import gleam/result
 
@@ -125,9 +126,65 @@ pub fn from_list(l: List(e)) {
 }
 
 fn do_from_list(l: List(e), tree: FingerTree(e)) {
-  case l {
-    [] -> tree
-    [x, ..xs] -> do_from_list(xs, tree |> push(x))
+  case tree, l {
+    _, [] -> tree
+    Empty, [a, b, c, d, e, f, g, h, i, j, k, ..rest] ->
+      do_from_list(
+        rest,
+        Deep(11, Four(a, b, c, d), Single(Node3(e, f, g)), Four(h, i, j, k)),
+      )
+    Empty, [a, b, c, d, e, f, g, h, i, j] ->
+      Deep(10, Four(a, b, c, d), Single(Node2(e, f)), Four(g, h, i, j))
+    Empty, [a, b, c, d, e, f, g, h, i] ->
+      Deep(9, Four(a, b, c, d), Single(Node1(e)), Four(f, g, h, i))
+
+    Empty, [a, b, c, d, e, f, g, h] ->
+      Deep(8, Four(a, b, c, d), Empty, Four(e, f, g, h))
+    Empty, [a, b, c, d, e, f, g] ->
+      Deep(7, Four(a, b, c, d), Empty, Three(e, f, g))
+    Empty, [a, b, c, d, e, f] -> Deep(6, Four(a, b, c, d), Empty, Two(e, f))
+    Empty, [a, b, c, d, e] -> Deep(5, Three(a, b, c), Empty, Two(d, e))
+    Empty, [a, b, c, d] -> Deep(4, Two(a, b), Empty, Two(c, d))
+    Empty, [a, b, c] -> Deep(3, Two(a, b), Empty, One(c))
+    Empty, [a, b] -> Deep(2, One(a), Empty, One(b))
+    Empty, [a] -> Single(a)
+    Single(a), [b, c, d, e, f, g, h, ..rest] ->
+      do_from_list(rest, Deep(8, Four(a, b, c, d), Empty, Four(e, f, g, h)))
+    Single(a), [b, c, d, e, f, g] ->
+      Deep(7, Four(a, b, c, d), Empty, Three(e, f, g))
+    Single(a), [b, c, d, e, f] -> Deep(6, Four(a, b, c, d), Empty, Two(e, f))
+    Single(a), [b, c, d, e] -> Deep(5, Three(a, b, c), Empty, Two(d, e))
+    Single(a), [b, c, d] -> Deep(4, Two(a, b), Empty, Two(c, d))
+    Single(a), [b, c] -> Deep(3, Two(a, b), Empty, One(c))
+    Single(a), [b] -> Deep(2, One(a), Empty, One(b))
+    Deep(s, pr, m, Four(a, b, c, d)), [e, f, g, ..rest] ->
+      do_from_list(
+        rest,
+        Deep(s + 3, pr, m |> push(Node3(a, b, c)), Four(d, e, f, g)),
+      )
+    Deep(s, pr, m, Four(a, b, c, d)), [e, f] ->
+      Deep(s + 2, pr, m |> push(Node2(a, b)), Four(c, d, e, f))
+    Deep(s, pr, m, Four(a, b, c, d)), [e] ->
+      Deep(s + 1, pr, m |> push(Node1(a)), Four(b, c, d, e))
+    Deep(s, pr, m, sf), [e, f, g, h, ..rest] ->
+      do_from_list(
+        rest,
+        Deep(s + 4, pr, m |> push(sf |> to_node), Four(e, f, g, h)),
+      )
+    Deep(s, pr, m, sf), [e, f, g] ->
+      Deep(s + 3, pr, m |> push(sf |> to_node), Three(e, f, g))
+    Deep(s, pr, m, sf), [e, f] ->
+      Deep(s + 2, pr, m |> push(sf |> to_node), Two(e, f))
+    Deep(s, pr, m, sf), [e] -> Deep(s + 1, pr, m |> push(sf |> to_node), One(e))
+  }
+}
+
+fn to_node(digits: Finger(u)) {
+  case digits {
+    One(u) -> Node1(u)
+    Two(u, v) -> Node2(u, v)
+    Three(u, v, w) -> Node3(u, v, w)
+    _ -> panic as "Somehow this broke?"
   }
 }
 
