@@ -1,5 +1,4 @@
 import gleam/option.{type Option, Some}
-import internal/finger_tree
 import internal/structure/modules.{
   type BinaryModule, type CodeSection, type CustomSection, type DataCountSection,
   type DataSection, type ElementSection, type ExportSection,
@@ -17,13 +16,13 @@ import internal/structure/types.{
   type TableType, type TypeIDX, type ValType,
 }
 import internal/visitor.{
-  type BinaryModuleVisitor, type VisitorCallback, BinaryModuleVisitor,
-  do_visit_array_type, do_visit_block_type, do_visit_code, do_visit_code_section,
-  do_visit_composite_type, do_visit_custom_section, do_visit_custom_sections,
-  do_visit_data, do_visit_data_count_section, do_visit_data_idx,
-  do_visit_data_section, do_visit_def_type, do_visit_elem_idx,
-  do_visit_element_mode, do_visit_element_section, do_visit_element_segment,
-  do_visit_export, do_visit_export_section, do_visit_expr, do_visit_field_idx,
+  type VisitorCallback, BinaryModuleVisitor, do_visit_array_type,
+  do_visit_block_type, do_visit_code, do_visit_code_section,
+  do_visit_composite_type, do_visit_custom_section, do_visit_data,
+  do_visit_data_count_section, do_visit_data_idx, do_visit_data_section,
+  do_visit_def_type, do_visit_elem_idx, do_visit_element_mode,
+  do_visit_element_section, do_visit_element_segment, do_visit_export,
+  do_visit_export_section, do_visit_expr, do_visit_field_idx,
   do_visit_field_type, do_visit_func_idx, do_visit_func_type,
   do_visit_function_section, do_visit_global, do_visit_global_idx,
   do_visit_global_section, do_visit_global_type, do_visit_heap_type,
@@ -3226,3 +3225,10 @@ pub fn visit_block_type(
 ) -> Result(#(ctx, BlockType), String) {
   do_visit_block_type(ctx, block_type, visitor)
 }
+
+pub fn new() {
+  visitor.empty_visitor
+}
+
+pub type BinaryModuleVisitor(ctx) =
+  visitor.BinaryModuleVisitor(ctx)

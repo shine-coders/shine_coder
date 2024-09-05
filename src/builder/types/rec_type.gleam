@@ -1,12 +1,20 @@
 import internal/finger_tree
 import internal/structure/types.{
-  type FieldType, type StructType, type SubType, type ValType,
+  type FieldType, type FuncType, type StructType, type SubType, type ValType,
   ArrayCompositeType, ArrayType, FuncCompositeType, FuncType, RecType,
   StructCompositeType, StructType, SubType,
 }
 
 pub fn from_sub_types(sub_types: List(SubType)) {
   RecType(sub_types |> finger_tree.from_list)
+}
+
+pub fn from_func_type(func_type: FuncType) {
+  RecType(
+    finger_tree.from_list([
+      SubType(True, finger_tree.new(), FuncCompositeType(func_type)),
+    ]),
+  )
 }
 
 pub fn func_type(parameters: List(ValType), results: List(ValType)) {
