@@ -900,7 +900,6 @@ pub type Instruction {
   Call(func_idx: FuncIDX)
   CallRef(type_idx: TypeIDX)
   CallIndirect(table_idx: TableIDX, type_idx: TypeIDX)
-  // expand(TypeSection[type_idx].subtype[sub_type_index]) -> CompositeType
   ReturnCall(func_idx: FuncIDX)
   ReturnCallRef(type_idx: TypeIDX)
   ReturnCallIndirect(table_idx: TableIDX, type_idx: TypeIDX)
