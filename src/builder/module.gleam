@@ -17,10 +17,10 @@ import internal/structure/types.{
   type RecType, type RefType, type Table, type TableIDX, type TableType,
   type TypeIDX, type ValType, ActiveData, ActiveElemMode, ArrayCompositeType,
   ArrayType, Code, Const, DataIDX, DeclarativeElemMode, ElemExpressions,
-  ElemFuncs, ElemIDX, FieldType, FuncCompositeType, FuncExport, FuncHeapType,
-  FuncIDX, FuncImport, FuncType, Global, GlobalExport, GlobalIDX, GlobalImport,
-  GlobalType, HeapTypeRefType, LabelIDX, Limits, LocalIDX, Locals, MemExport,
-  MemIDX, MemImport, MemType, PassiveData, PassiveElemMode, RecType,
+  ElemFuncs, ElemIDX, FieldIDX, FieldType, FuncCompositeType, FuncExport,
+  FuncHeapType, FuncIDX, FuncImport, FuncType, Global, GlobalExport, GlobalIDX,
+  GlobalImport, GlobalType, HeapTypeRefType, LabelIDX, Limits, LocalIDX, Locals,
+  MemExport, MemIDX, MemImport, MemType, PassiveData, PassiveElemMode, RecType,
   StructCompositeType, StructType, SubType, Table, TableExport, TableIDX,
   TableImport, TableType, TypeIDX, Var,
 }
@@ -1320,6 +1320,15 @@ pub fn func_idx(idx: Int) {
   }
 }
 
+/// Create a field index, as long as the index is a valid U32 value. The index must
+/// must be less than the number of fields in the struct.
+pub fn field_idx(idx: Int) {
+  case u32(idx) {
+    Ok(idx) -> Ok(FieldIDX(idx))
+    Error(msg) -> Error(msg)
+  }
+}
+
 /// Encode the module into a BitArray, as long as the module is syntatically correctly.
 /// Modules encoded with this function will not be validated. Please use the `validate`
 /// function to validate the module before encoding to ensure that the module is usable.
@@ -1340,4 +1349,20 @@ pub fn encode(module: BinaryModule) {
 /// - Error(message)
 pub fn decode(module: BitArray) {
   modules.decode_module(module)
+}
+
+/// ShineCoder's FingerTree is an efficient data structure for
+/// storing and manipulating the ends of ordered vector data.
+/// This function takes a list and converts it into an opaque
+/// FingerTree.
+pub fn to_vector(values: List(u)) {
+  values |> finger_tree.from_list
+}
+
+/// ShineCoder's FingerTree is an efficient data structure for
+/// storing and manipulating the ends of ordered vector data.
+/// This function takes a FingerTree and converts it into a
+/// normal List.
+pub fn to_list(values: FingerTree(u)) {
+  values |> finger_tree.to_list
 }

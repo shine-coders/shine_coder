@@ -78,28 +78,10 @@ pub opaque type LaneIDX8 {
   LaneIDX8(val: Int)
 }
 
-/// This type is used to describe a number type, namely the primary wasm number types
-/// Please see: https://webassembly.github.io/gc/core/syntax/types.html#number-types
-pub type NumType {
-  I32NumType
-  I64NumType
-  F32NumType
-  F64NumType
-}
-
-/// A bool is always an I32
-pub const bool = I32NumType
-
-/// This type is used to describe a SIMD vector type
-/// pleasae see: https://webassembly.github.io/gc/core/syntax/types.html#vector-types
-pub type VecType {
-  VecType
-}
-
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#heap-types
 /// For validation and execution, please see: https://webassembly.github.io/gc/core/valid/conventions.html#types
-/// Please note that Abstract Heap Types are a seperate type, and are combined with heap types
-/// in this convention for the sake of clarity, and ease of encoding and decoding
+/// Please note that Abstract Heap Types are a seperate type, and are combined here with
+/// heap types in this convention for the sake of clarity and performance.
 pub type HeapType {
   FuncHeapType
   NoFuncHeapType
@@ -115,26 +97,10 @@ pub type HeapType {
   BotHeapType
 }
 
-/// This is a collection of all the abstract classifications of RefTypes
-/// Please see: https://webassembly.github.io/gc/core/syntax/types.html#heap-types
-pub type AbstractHeapType {
-  FuncAbstractHeapType
-  NoAbstractFuncHeapType
-  ExternAbstractHeapType
-  NoExternAbstractHeapType
-  AnyAbstractHeapType
-  EqAbstractHeapType
-  I31AbstractHeapType
-  StructAbstractHeapType
-  ArrayAbstractHeapType
-  NoneAbstractHeapType
-}
-
-/// A refrence type describes a refrence to an object that may or may not be nullable
+/// A refrence type classifies a refrence by it's underlying type
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#reference-types
 pub type RefType {
   HeapTypeRefType(ht: HeapType, null: Bool)
-
   /// Shorthand for (ref null Any)
   AnyRefType
   /// Shorthand for (ref null Eq)
