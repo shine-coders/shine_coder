@@ -29,9 +29,6 @@ pub fn visit_struct_composite_type() {
 }
 
 pub fn visit_array_composite_type() {
-  // I cleaned up the imports :)
-  // I can take any random type I want, right?
-  // Well... for now I'll take i16
   let array_type = composite_type.array_type(field_type.i16)
   visit_test_variant.run(
     array_type,

@@ -28,7 +28,7 @@ pub fn visit_ref_null_test() {
     visitor.on_enter_instruction,
     visitor.on_exit_instruction,
     visitor.on_enter_ref_null,
-    visitor.on_exit_ref_func,
+    visitor.on_exit_ref_null,
     visitor.visit_instruction,
   )
 }

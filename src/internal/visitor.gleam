@@ -1,5 +1,3 @@
-import gleam/io
-import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result.{map, try}
 import internal/finger_tree.{type FingerTree}
@@ -43,6 +41,7 @@ import internal/structure/types.{
   TableGrow, TableImport, TableInit, TableSet, TableSize, TableType, TypeIDX,
   V128ValType, ValTypeBlockType, ValTypeStorageType, VoidBlockType,
 }
+import pprint
 
 pub type VisitorCallback(ctx, element) =
   fn(ctx, element) -> Result(#(ctx, element), String)
@@ -916,7 +915,6 @@ fn do_visit_element_list(
       },
     ),
   )
-
   #(ctx, elements)
 }
 
@@ -940,7 +938,6 @@ pub fn do_visit_type_section(
         visitor,
         do_visit_rec_type,
       ))
-
       #(ctx, Some(TypeSection(types)))
     }
     None -> Ok(#(ctx, None))
@@ -958,14 +955,12 @@ pub fn do_visit_rec_type(
     visitor.on_enter_rec_type,
     visitor.on_exit_rec_type,
   )
-
   use #(ctx, sub_types) <- map(do_visit_element_list(
     ctx,
     rec_type.sub_types,
     visitor,
     do_visit_sub_type,
   ))
-
   #(ctx, RecType(sub_types))
 }
 
@@ -2836,7 +2831,7 @@ pub fn do_visit_instruction(
     }
     MemoryInit(data_idx) -> {
       use #(ctx, data_idx) <- map(do_visit_data_idx(ctx, data_idx, visitor))
-      #(ctx, DataDrop(data_idx))
+      #(ctx, MemoryInit(data_idx))
     }
     DataDrop(data_idx) -> {
       use #(ctx, data_idx) <- map(do_visit_data_idx(ctx, data_idx, visitor))
