@@ -3,8 +3,7 @@ import builder/instructions/control
 import builder/instructions/i32
 import builder/module
 import builder/types/block_type
-import gleam/option.{None}
-import internal/finger_tree
+import gleam/option.{None, Some}
 import internal/structure/types.{
   ArrayCopy, ArrayFill, ArrayGet, ArrayGetS, ArrayGetU, ArrayInitData,
   ArrayInitElem, ArrayNew, ArrayNewData, ArrayNewDefault, ArrayNewElem,
@@ -17,6 +16,7 @@ import internal/structure/types.{
   StructSet, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableSet,
   TableSize,
 }
+import shine_tree
 import values
 import visitor
 import visitor/visit_test_variant
@@ -30,6 +30,7 @@ pub fn visit_ref_null_test() {
     visitor.on_enter_ref_null,
     visitor.on_exit_ref_null,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -42,6 +43,7 @@ pub fn visit_ref_func_test() {
     visitor.on_enter_ref_func,
     visitor.on_exit_ref_func,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -54,6 +56,7 @@ pub fn visit_ref_test_test() {
     visitor.on_enter_ref_test,
     visitor.on_exit_ref_test,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -66,6 +69,7 @@ pub fn visit_ref_test_nullable_test() {
     visitor.on_enter_ref_test_nullable,
     visitor.on_exit_ref_test_nullable,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -78,6 +82,7 @@ pub fn visit_ref_cast_test() {
     visitor.on_enter_ref_cast,
     visitor.on_exit_ref_cast,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -90,6 +95,7 @@ pub fn visit_ref_cast_nullable_test() {
     visitor.on_enter_ref_cast_nullable,
     visitor.on_exit_ref_cast_nullable,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -103,6 +109,7 @@ pub fn visit_struct_get_test() {
     visitor.on_enter_struct_get,
     visitor.on_exit_struct_get,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -116,6 +123,7 @@ pub fn visit_struct_get_s_test() {
     visitor.on_enter_struct_get_s,
     visitor.on_exit_struct_get_s,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -129,6 +137,7 @@ pub fn visit_struct_get_u_test() {
     visitor.on_enter_struct_get_u,
     visitor.on_exit_struct_get_u,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -142,6 +151,7 @@ pub fn visit_struct_set_test() {
     visitor.on_enter_struct_set,
     visitor.on_exit_struct_set,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -154,6 +164,7 @@ pub fn visit_array_new_test() {
     visitor.on_enter_array_new,
     visitor.on_exit_array_new,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -166,6 +177,7 @@ pub fn visit_array_new_default_test() {
     visitor.on_enter_array_new_default,
     visitor.on_exit_array_new_default,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -179,6 +191,7 @@ pub fn visit_array_new_data_test() {
     visitor.on_enter_array_new_data,
     visitor.on_exit_array_new_data,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -192,6 +205,7 @@ pub fn visit_array_new_elem_test() {
     visitor.on_enter_array_new_elem,
     visitor.on_exit_array_new_elem,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -205,6 +219,7 @@ pub fn visit_array_new_fixed_test() {
     visitor.on_enter_array_new_fixed,
     visitor.on_exit_array_new_fixed,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -217,6 +232,7 @@ pub fn visit_array_get_test() {
     visitor.on_enter_array_get,
     visitor.on_exit_array_get,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -229,6 +245,7 @@ pub fn visit_array_get_s_test() {
     visitor.on_enter_array_get_s,
     visitor.on_exit_array_get_s,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -241,6 +258,7 @@ pub fn visit_array_get_u_test() {
     visitor.on_enter_array_get_u,
     visitor.on_exit_array_get_u,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -253,6 +271,7 @@ pub fn visit_array_set_test() {
     visitor.on_enter_array_set,
     visitor.on_exit_array_set,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -265,6 +284,7 @@ pub fn visit_array_fill_test() {
     visitor.on_enter_array_fill,
     visitor.on_exit_array_fill,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -278,6 +298,7 @@ pub fn visit_array_copy_test() {
     visitor.on_enter_array_copy,
     visitor.on_exit_array_copy,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -291,6 +312,7 @@ pub fn visit_array_init_data_test() {
     visitor.on_enter_array_init_data,
     visitor.on_exit_array_init_data,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -304,6 +326,7 @@ pub fn visit_array_init_elem_test() {
     visitor.on_enter_array_init_elem,
     visitor.on_exit_array_init_elem,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -316,8 +339,15 @@ pub fn visit_select_t_test() {
     visitor.on_enter_instruction,
     visitor.on_exit_instruction,
     visitor.on_enter_select_t,
-    visitor.on_exit_ref_func,
+    visitor.on_exit_select_t,
     visitor.visit_instruction,
+    Some(fn(actual, expected) {
+      case actual, expected {
+        SelectT(actual_val_types), SelectT(expected_val_types) ->
+          shine_tree.equals(actual_val_types, expected_val_types)
+        a, b -> a == b
+      }
+    }),
   )
 }
 
@@ -330,6 +360,7 @@ pub fn visit_local_get_test() {
     visitor.on_enter_local_get,
     visitor.on_exit_local_get,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -342,6 +373,7 @@ pub fn visit_local_set_test() {
     visitor.on_enter_local_set,
     visitor.on_exit_local_set,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -354,6 +386,7 @@ pub fn visit_local_tee_test() {
     visitor.on_enter_local_tee,
     visitor.on_exit_local_tee,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -366,6 +399,7 @@ pub fn visit_global_get_test() {
     visitor.on_enter_global_get,
     visitor.on_exit_global_get,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -378,6 +412,7 @@ pub fn visit_global_set_test() {
     visitor.on_enter_global_set,
     visitor.on_exit_global_set,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -390,6 +425,7 @@ pub fn visit_table_get_test() {
     visitor.on_enter_table_get,
     visitor.on_exit_table_get,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -402,6 +438,7 @@ pub fn visit_table_set_test() {
     visitor.on_enter_table_set,
     visitor.on_exit_table_set,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -414,6 +451,7 @@ pub fn visit_table_size_test() {
     visitor.on_enter_table_size,
     visitor.on_exit_table_size,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -426,6 +464,7 @@ pub fn visit_table_grow_test() {
     visitor.on_enter_table_grow,
     visitor.on_exit_table_grow,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -438,6 +477,7 @@ pub fn visit_table_fill_test() {
     visitor.on_enter_table_fill,
     visitor.on_exit_table_fill,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -451,6 +491,7 @@ pub fn visit_table_copy_test() {
     visitor.on_enter_table_copy,
     visitor.on_exit_table_copy,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -465,6 +506,7 @@ pub fn visit_table_init_test() {
     visitor.on_enter_table_init,
     visitor.on_exit_table_init,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -477,6 +519,7 @@ pub fn visit_elem_drop_test() {
     visitor.on_enter_elem_drop,
     visitor.on_exit_elem_drop,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -489,6 +532,7 @@ pub fn visit_memory_init_test() {
     visitor.on_enter_memory_init,
     visitor.on_exit_memory_init,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -501,6 +545,7 @@ pub fn visit_data_drop_test() {
     visitor.on_enter_data_drop,
     visitor.on_exit_data_drop,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -522,6 +567,7 @@ pub fn visit_block_test() {
     visitor.on_enter_block,
     visitor.on_exit_block,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -538,11 +584,12 @@ pub fn visit_loop_test() {
     visitor.on_enter_loop,
     visitor.on_exit_loop,
     visitor.visit_instruction,
+    None,
   )
 }
 
 pub fn visit_if_test() {
-  let if_block = finger_tree.from_list([Nop])
+  let if_block = shine_tree.from_list([Nop])
 
   visit_test_variant.run(
     If(block_type.void, if_block, None),
@@ -551,6 +598,7 @@ pub fn visit_if_test() {
     visitor.on_enter_if,
     visitor.on_exit_if,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -563,6 +611,7 @@ pub fn visit_br_test() {
     visitor.on_enter_br,
     visitor.on_exit_br,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -575,6 +624,7 @@ pub fn visit_br_if_test() {
     visitor.on_enter_br_if,
     visitor.on_exit_br_if,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -586,7 +636,7 @@ pub fn visit_br_table_test() {
   let assert Ok(label_idx5) = module.label_idx(46)
   let assert Ok(default_label) = module.label_idx(47)
   let labels =
-    finger_tree.from_list([
+    shine_tree.from_list([
       label_idx1,
       label_idx2,
       label_idx3,
@@ -600,6 +650,17 @@ pub fn visit_br_table_test() {
     visitor.on_enter_br_table,
     visitor.on_exit_br_table,
     visitor.visit_instruction,
+    Some(fn(actual, expected) {
+      case actual, expected {
+        BrTable(actual_labels, actual_default),
+          BrTable(expected_labels, expected_default)
+        -> {
+          shine_tree.equals(actual_labels, expected_labels)
+          && actual_default == expected_default
+        }
+        a, b -> a == b
+      }
+    }),
   )
 }
 
@@ -612,6 +673,7 @@ pub fn visit_br_on_null_test() {
     visitor.on_enter_br_on_null,
     visitor.on_exit_br_on_null,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -624,6 +686,7 @@ pub fn visit_br_on_non_null_test() {
     visitor.on_enter_br_on_non_null,
     visitor.on_exit_br_on_non_null,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -638,6 +701,7 @@ pub fn visit_br_on_cast_test() {
     visitor.on_enter_br_on_cast,
     visitor.on_exit_br_on_cast,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -652,6 +716,7 @@ pub fn visit_br_on_cast_fail_test() {
     visitor.on_enter_br_on_cast_fail,
     visitor.on_exit_br_on_cast_fail,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -664,6 +729,7 @@ pub fn visit_call_test() {
     visitor.on_enter_call,
     visitor.on_exit_call,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -676,6 +742,7 @@ pub fn visit_call_ref_test() {
     visitor.on_enter_call_ref,
     visitor.on_exit_call_ref,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -689,6 +756,7 @@ pub fn visit_call_indirect_test() {
     visitor.on_enter_call_indirect,
     visitor.on_exit_call_indirect,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -701,6 +769,7 @@ pub fn visit_return_call_test() {
     visitor.on_enter_return_call,
     visitor.on_exit_return_call,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -713,6 +782,7 @@ pub fn visit_return_call_ref_test() {
     visitor.on_enter_return_call_ref,
     visitor.on_exit_return_call_ref,
     visitor.visit_instruction,
+    None,
   )
 }
 
@@ -726,5 +796,6 @@ pub fn visit_return_call_indirect_test() {
     visitor.on_enter_return_call_indirect,
     visitor.on_exit_return_call_indirect,
     visitor.visit_instruction,
+    None,
   )
 }

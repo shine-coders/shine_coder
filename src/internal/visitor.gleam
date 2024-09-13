@@ -1,6 +1,5 @@
 import gleam/option.{type Option, None, Some}
 import gleam/result.{map, try}
-import internal/finger_tree.{type FingerTree}
 import internal/structure/modules.{
   type BinaryModule, type CodeSection, type CustomSection, type DataCountSection,
   type DataSection, type ElementSection, type ExportSection,
@@ -42,6 +41,7 @@ import internal/structure/types.{
   V128ValType, ValTypeBlockType, ValTypeStorageType, VoidBlockType,
 }
 import pprint
+import shine_tree.{type ShineTree}
 
 pub type VisitorCallback(ctx, element) =
   fn(ctx, element) -> Result(#(ctx, element), String)
@@ -899,19 +899,19 @@ fn do_visit(ctx, element, visitor: Option(VisitorCallback(ctx, element))) {
 
 fn do_visit_element_list(
   ctx,
-  elements: FingerTree(element),
+  elements: ShineTree(element),
   visitor: BinaryModuleVisitor(ctx),
   do_visit_callback: fn(ctx, element, BinaryModuleVisitor(ctx)) ->
     Result(#(ctx, element), String),
 ) {
   use #(ctx, elements, _) <- map(
-    finger_tree.try_reducel(
+    shine_tree.try_foldl(
       elements,
-      #(ctx, finger_tree.empty, visitor),
+      #(ctx, shine_tree.empty, visitor),
       fn(acc, element) {
         let #(ctx, acc, visitor) = acc
         use #(ctx, element) <- map(do_visit_callback(ctx, element, visitor))
-        #(ctx, acc |> finger_tree.push(element), visitor)
+        #(ctx, acc |> shine_tree.push(element), visitor)
       },
     ),
   )
@@ -1329,15 +1329,15 @@ pub fn do_visit_array_type(
 
 pub fn do_visit_custom_sections(
   ctx,
-  custom_sections: Option(FingerTree(CustomSection)),
+  custom_sections: Option(ShineTree(CustomSection)),
   visitor: BinaryModuleVisitor(ctx),
-) -> Result(#(ctx, Option(FingerTree(CustomSection))), String) {
+) -> Result(#(ctx, Option(ShineTree(CustomSection))), String) {
   case custom_sections {
     Some(custom_sections) ->
       do_visit_custom_sections_filter(
         ctx,
         custom_sections,
-        finger_tree.empty,
+        shine_tree.empty,
         visitor,
       )
     _ -> Ok(#(ctx, custom_sections))
@@ -1346,11 +1346,11 @@ pub fn do_visit_custom_sections(
 
 fn do_visit_custom_sections_filter(
   ctx,
-  custom_sections: FingerTree(CustomSection),
-  acc: FingerTree(CustomSection),
+  custom_sections: ShineTree(CustomSection),
+  acc: ShineTree(CustomSection),
   visitor: BinaryModuleVisitor(ctx),
-) -> Result(#(ctx, Option(FingerTree(CustomSection))), String) {
-  case finger_tree.shift(custom_sections) {
+) -> Result(#(ctx, Option(ShineTree(CustomSection))), String) {
+  case shine_tree.shift(custom_sections) {
     Ok(#(custom_section, custom_sections)) -> {
       use #(ctx, custom_section) <- try(do_visit_custom_section(
         ctx,
@@ -1362,7 +1362,7 @@ fn do_visit_custom_sections_filter(
           do_visit_custom_sections_filter(
             ctx,
             custom_sections,
-            finger_tree.push(acc, custom_section),
+            shine_tree.push(acc, custom_section),
             visitor,
           )
         None ->

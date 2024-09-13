@@ -1,6 +1,7 @@
 import builder/module
 import builder/types/block_type
 import builder/types/val_type
+import gleam/option.{None}
 import visitor
 import visitor/visit_test_variant
 
@@ -12,6 +13,7 @@ pub fn visit_val_type_storage_type_test() {
     visitor.on_enter_val_type_block_type,
     visitor.on_exit_val_type_block_type,
     visitor.visit_block_type,
+    None,
   )
 }
 
@@ -23,6 +25,7 @@ pub fn visit_void_block_type_test() {
     visitor.on_enter_void_block_type,
     visitor.on_exit_void_block_type,
     visitor.visit_block_type,
+    None,
   )
 }
 
@@ -35,5 +38,6 @@ pub fn visit_func_type_block_type_test() {
     visitor.on_enter_func_type_block_type,
     visitor.on_exit_func_type_block_type,
     visitor.visit_block_type,
+    None,
   )
 }

@@ -6,10 +6,10 @@ import gleam/string
 import gleeunit/should
 import ieee_float
 import internal/binary/types
-import internal/finger_tree
 import internal/structure/numbers
 import internal/structure/types as structure_types
 import pprint
+import shine_tree
 
 fn round_trip(
   expected_inst: structure_types.Instruction,
@@ -116,7 +116,7 @@ pub fn br_table_test() {
   let label_c = structure_types.LabelIDX(label_c)
 
   let label_list = [label_a, label_b, label_c]
-  let labels = finger_tree.from_list(label_list)
+  let labels = shine_tree.from_list(label_list)
 
   let assert Ok(#(
     structure_types.BrTable(actual_labels, actual_label_default),
@@ -124,7 +124,7 @@ pub fn br_table_test() {
   )) = types.decode_instruction(<<0x0E, 3, 1, 2, 3, 42>>)
 
   actual_labels
-  |> finger_tree.to_list
+  |> shine_tree.to_list
   |> should.equal(label_list)
 
   actual_label_default
@@ -204,7 +204,7 @@ pub fn block_test() {
   let drop = structure_types.Drop
 
   let instruction_list = [local_get1, local_get2, i32_add, drop]
-  let block_body = structure_types.Expr(finger_tree.from_list(instruction_list))
+  let block_body = structure_types.Expr(shine_tree.from_list(instruction_list))
 
   let assert Ok(#(
     structure_types.Block(
@@ -219,7 +219,7 @@ pub fn block_test() {
   |> should.equal(structure_types.VoidBlockType)
 
   actual_block_body
-  |> finger_tree.to_list
+  |> shine_tree.to_list
   |> should.equal(instruction_list)
 
   let assert Ok(builder) =
@@ -256,7 +256,7 @@ pub fn loop_test() {
     types.decode_instruction(<<0x03, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
 
   block_body
-  |> finger_tree.to_list
+  |> shine_tree.to_list
   |> should.equal(instruction_list)
 
   let assert Ok(builder) =
@@ -264,7 +264,7 @@ pub fn loop_test() {
       bytes_builder.new(),
       structure_types.Loop(
         structure_types.VoidBlockType,
-        structure_types.Expr(instruction_list |> finger_tree.from_list),
+        structure_types.Expr(instruction_list |> shine_tree.from_list),
       ),
     )
 
@@ -284,7 +284,7 @@ pub fn if_test() {
   let drop = structure_types.Drop
 
   let instruction_list = [local_get1, local_get2, i32_add, drop]
-  let block_body = finger_tree.from_list(instruction_list)
+  let block_body = shine_tree.from_list(instruction_list)
 
   let assert Ok(#(
     structure_types.If(structure_types.VoidBlockType, result_body, None),
@@ -293,7 +293,7 @@ pub fn if_test() {
     types.decode_instruction(<<0x04, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
 
   result_body
-  |> finger_tree.to_list
+  |> shine_tree.to_list
   |> should.equal(instruction_list)
 
   let assert Ok(builder) =
@@ -313,7 +313,7 @@ pub fn if_else_test() {
   let local_get1 = structure_types.LocalGet(local_idx1)
   let drop = structure_types.Drop
 
-  let block_body = finger_tree.from_list([local_get1, drop])
+  let block_body = shine_tree.from_list([local_get1, drop])
 
   round_trip(
     structure_types.If(
@@ -884,13 +884,13 @@ pub fn select_t_test() {
     structure_types.F32ValType,
     structure_types.F64ValType,
   ]
-  let val_types = finger_tree.from_list(val_types_list)
+  let val_types = shine_tree.from_list(val_types_list)
 
   let assert Ok(#(structure_types.SelectT(actual_val_types), <<>>)) =
     types.decode_instruction(<<0x1C, 0x04, 0x7F, 0x7E, 0x7D, 0x7C>>)
 
   actual_val_types
-  |> finger_tree.to_list
+  |> shine_tree.to_list
   |> should.equal(val_types_list)
 
   let assert Ok(builder) =

@@ -1,10 +1,10 @@
 import gleam/option.{type Option}
 import gleam/result
-import internal/finger_tree.{type FingerTree}
 import internal/structure/common.{between}
 import internal/structure/numbers.{
   type F32, type F64, type I32, type I64, type U32, type V128Value,
 }
+import shine_tree.{type ShineTree}
 
 /// Get the lane_16 indx nvalue as an integer
 pub fn unwrap_lane_16(val: LaneIDX16) {
@@ -173,19 +173,19 @@ pub type BlockType {
 
 /// An instruction type is two result types, one for the parameters, and one for the results.
 pub type InstructionType {
-  InstructionType(parameters: FingerTree(ValType), results: FingerTree(ValType))
+  InstructionType(parameters: ShineTree(ValType), results: ShineTree(ValType))
 }
 
 /// A function type describes the shape of the parameters and results of a given function.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#function-types
 pub type FuncType {
-  FuncType(parameters: FingerTree(ValType), results: FingerTree(ValType))
+  FuncType(parameters: ShineTree(ValType), results: ShineTree(ValType))
 }
 
 /// A struct type describes the shape of the fields of a given struct.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#aggregate-types
 pub type StructType {
-  StructType(ft: FingerTree(FieldType))
+  StructType(ft: ShineTree(FieldType))
 }
 
 /// An array type describes an array with the given field type.
@@ -239,7 +239,7 @@ pub type CompositeType {
 /// It is used to describe the shape of mutually recursive SubTypes.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#recursive-types
 pub type RecType {
-  RecType(sub_types: FingerTree(SubType))
+  RecType(sub_types: ShineTree(SubType))
 }
 
 /// An index into an array of types, either a recursive type, a module subtype, or a
@@ -293,7 +293,7 @@ pub type MemIDX {
 /// also an array of matching subtype indexes that the type matches.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#recursive-types
 pub type SubType {
-  SubType(final: Bool, t: FingerTree(TypeIDX), ct: CompositeType)
+  SubType(final: Bool, t: ShineTree(TypeIDX), ct: CompositeType)
 }
 
 /// A definition of a limit range, which has a minimum, and an optional maximum which defaults
@@ -781,7 +781,7 @@ pub type Instruction {
   ExternConvertAny
   Drop
   Select
-  SelectT(vt: FingerTree(ValType))
+  SelectT(vt: ShineTree(ValType))
   LocalGet(idx: LocalIDX)
   LocalSet(idx: LocalIDX)
   LocalTee(idx: LocalIDX)
@@ -852,12 +852,12 @@ pub type Instruction {
   Loop(bt: BlockType, instructions: Expr)
   If(
     bt: BlockType,
-    instructions: FingerTree(Instruction),
-    else_instructions: Option(FingerTree(Instruction)),
+    instructions: ShineTree(Instruction),
+    else_instructions: Option(ShineTree(Instruction)),
   )
   Br(label: LabelIDX)
   BrIf(label: LabelIDX)
-  BrTable(labels: FingerTree(LabelIDX), default: LabelIDX)
+  BrTable(labels: ShineTree(LabelIDX), default: LabelIDX)
   BrOnNull(label: LabelIDX)
   BrOnNonNull(label: LabelIDX)
   BrOnCast(label: LabelIDX, rt1: RefType, rt2: RefType)
@@ -885,17 +885,17 @@ pub fn get_instruction_type(
     End | Else -> Error(Nil)
 
     I64Const(_) ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([I64ValType])))
+      Ok(InstructionType(shine_tree.empty, shine_tree.from_list([I64ValType])))
     I32Const(_) | ArrayLen | I31GetS | I31GetU ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([I32ValType])))
+      Ok(InstructionType(shine_tree.empty, shine_tree.from_list([I32ValType])))
     F64Const(_) ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([F64ValType])))
+      Ok(InstructionType(shine_tree.empty, shine_tree.from_list([F64ValType])))
     F32Const(_) ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([F32ValType])))
+      Ok(InstructionType(shine_tree.empty, shine_tree.from_list([F32ValType])))
     I64Popcnt | I64Ctz | I64Clz | I64Extend32S | I64Extend16S | I64Extend8S ->
       Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([I64ValType]),
+        shine_tree.from_list([I64ValType]),
+        shine_tree.from_list([I64ValType]),
       ))
     I32Popcnt
     | I32Ctz
@@ -910,18 +910,18 @@ pub fn get_instruction_type(
     | I32Load8U(_)
     | MemoryGrow ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([I32ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
     F64Nearest | F64Trunc | F64Floor | F64Ceil | F64Sqrt | F64Neg | F64Abs ->
       Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([F64ValType]),
+        shine_tree.from_list([F64ValType]),
+        shine_tree.from_list([F64ValType]),
       ))
     F32Nearest | F32Trunc | F32Floor | F32Ceil | F32Sqrt | F32Neg | F32Abs ->
       Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([F32ValType]),
+        shine_tree.from_list([F32ValType]),
+        shine_tree.from_list([F32ValType]),
       ))
     I64Rotr
     | I64Rotl
@@ -939,8 +939,8 @@ pub fn get_instruction_type(
     | I64Sub
     | I64Add ->
       Ok(InstructionType(
-        finger_tree.from_list([I64ValType, I64ValType]),
-        finger_tree.from_list([I64ValType]),
+        shine_tree.from_list([I64ValType, I64ValType]),
+        shine_tree.from_list([I64ValType]),
       ))
     I32Rotr
     | I32Rotl
@@ -968,23 +968,23 @@ pub fn get_instruction_type(
     | I32Ne
     | I32Eq ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType, I32ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([I32ValType, I32ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
     F64Copysign | F64Max | F64Min | F64Div | F64Mul | F64Sub | F64Add ->
       Ok(InstructionType(
-        finger_tree.from_list([F64ValType, F64ValType]),
-        finger_tree.from_list([F64ValType]),
+        shine_tree.from_list([F64ValType, F64ValType]),
+        shine_tree.from_list([F64ValType]),
       ))
     F32Copysign | F32Max | F32Min | F32Div | F32Mul | F32Sub | F32Add ->
       Ok(InstructionType(
-        finger_tree.from_list([F32ValType, F32ValType]),
-        finger_tree.from_list([F32ValType]),
+        shine_tree.from_list([F32ValType, F32ValType]),
+        shine_tree.from_list([F32ValType]),
       ))
     I64Eqz | I32WrapI64 ->
       Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([I64ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
     I64GeS
     | I64GeU
@@ -997,19 +997,19 @@ pub fn get_instruction_type(
     | I64Ne
     | I64Eq ->
       Ok(InstructionType(
-        finger_tree.from_list([I64ValType, I64ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([I64ValType, I64ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
 
     F64Ge | F64Le | F64Gt | F64Lt | F64Ne | F64Eq ->
       Ok(InstructionType(
-        finger_tree.from_list([F64ValType, F64ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([F64ValType, F64ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
     F32Ge | F32Le | F32Gt | F32Lt | F32Ne | F32Eq ->
       Ok(InstructionType(
-        finger_tree.from_list([F32ValType, F32ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([F32ValType, F32ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
     I64ExtendI32S
     | I64ExtendI32U
@@ -1021,8 +1021,8 @@ pub fn get_instruction_type(
     | I64Load32S(_)
     | I64Load32U(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([I64ValType]),
+        shine_tree.from_list([I32ValType]),
+        shine_tree.from_list([I64ValType]),
       ))
     I64TruncF64S
     | I64TruncF64U
@@ -1030,18 +1030,18 @@ pub fn get_instruction_type(
     | I64TruncSatF64U
     | I64ReinterpretF64 ->
       Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([I64ValType]),
+        shine_tree.from_list([F64ValType]),
+        shine_tree.from_list([I64ValType]),
       ))
     I64TruncF32S | I64TruncF32U | I64TruncSatF32S | I64TruncSatF32U ->
       Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([I64ValType]),
+        shine_tree.from_list([F32ValType]),
+        shine_tree.from_list([I64ValType]),
       ))
     I32TruncF64S | I32TruncF64U | I32TruncSatF64S | I32TruncSatF64U ->
       Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([F64ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
     I32TruncF32S
     | I32TruncF32U
@@ -1049,44 +1049,41 @@ pub fn get_instruction_type(
     | I32TruncSatF32U
     | I32ReinterpretF32 ->
       Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([F32ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
     F32DemoteF64 ->
       Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([F64ValType]),
+        shine_tree.from_list([F32ValType]),
+        shine_tree.from_list([F64ValType]),
       ))
     F64PromoteF32 ->
       Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([F32ValType]),
+        shine_tree.from_list([F64ValType]),
+        shine_tree.from_list([F32ValType]),
       ))
     F64ConvertI64S | F64ConvertI64U | F64ReinterpretI64 ->
       Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([F64ValType]),
+        shine_tree.from_list([I64ValType]),
+        shine_tree.from_list([F64ValType]),
       ))
     F64ConvertI32S | F64ConvertI32U | F64Load(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([F64ValType]),
+        shine_tree.from_list([I32ValType]),
+        shine_tree.from_list([F64ValType]),
       ))
     F32ConvertI64S | F32ConvertI64U ->
       Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([F32ValType]),
+        shine_tree.from_list([I64ValType]),
+        shine_tree.from_list([F32ValType]),
       ))
     F32ConvertI32S | F32ConvertI32U | F32ReinterpretI32 | F32Load(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([F32ValType]),
+        shine_tree.from_list([I32ValType]),
+        shine_tree.from_list([F32ValType]),
       ))
     V128Const(_) ->
-      Ok(InstructionType(
-        finger_tree.new(),
-        finger_tree.from_list([V128ValType]),
-      ))
+      Ok(InstructionType(shine_tree.empty, shine_tree.from_list([V128ValType])))
     V128Not
     | I64x2Neg
     | I64x2Abs
@@ -1126,8 +1123,8 @@ pub fn get_instruction_type(
     | F64x2ConvertLowI32x4U
     | F64x2PromoteLowF32x4 ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([V128ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     V128Xor
     | V128AndNot
@@ -1263,13 +1260,13 @@ pub fn get_instruction_type(
     | F32x4Add
     | I64x2Mul ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType, V128ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([V128ValType, V128ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     V128Bitselect ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType, V128ValType, V128ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([V128ValType, V128ValType, V128ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     V128AnyTrue
     | I8x16ExtractLaneS(_)
@@ -1285,8 +1282,8 @@ pub fn get_instruction_type(
     | I16x8Bitmask
     | I8x16Bitmask ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([V128ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
     I32x4Splat
     | I16x8Splat
@@ -1305,43 +1302,43 @@ pub fn get_instruction_type(
     | V128Load16Splat(_)
     | V128Load8Splat(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([I32ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     I64x2Splat ->
       Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([I64ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     F32x4Splat ->
       Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([F32ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     F64x2Splat ->
       Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([F64ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     I64x2ExtractLane(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([I64ValType]),
+        shine_tree.from_list([V128ValType]),
+        shine_tree.from_list([I64ValType]),
       ))
     I32x4ExtractLane(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([I32ValType]),
+        shine_tree.from_list([V128ValType]),
+        shine_tree.from_list([I32ValType]),
       ))
     F32x4ExtractLane(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([F32ValType]),
+        shine_tree.from_list([V128ValType]),
+        shine_tree.from_list([F32ValType]),
       ))
     F64x2ExtractLane(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([F64ValType]),
+        shine_tree.from_list([V128ValType]),
+        shine_tree.from_list([F64ValType]),
       ))
     I8x16ReplaceLane(_)
     | I16x8ReplaceLane(_)
@@ -1359,25 +1356,25 @@ pub fn get_instruction_type(
     | I8x16ShrU
     | I8x16Shl ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType, I32ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([V128ValType, I32ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     I64x2ReplaceLane(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType, I64ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([V128ValType, I64ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     F32x4ReplaceLane(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType, F32ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([V128ValType, F32ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     F64x2ReplaceLane(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([V128ValType, F64ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([V128ValType, F64ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
-    Nop -> Ok(InstructionType(finger_tree.new(), finger_tree.new()))
+    Nop -> Ok(InstructionType(shine_tree.empty, shine_tree.empty))
 
     // TODO: Each of these instructions need to be implemented and checked
     RefFunc(_)
@@ -1445,38 +1442,38 @@ pub fn get_instruction_type(
 
     RefI31 ->
       Ok(InstructionType(
-        finger_tree.new(),
-        finger_tree.from_list([RefTypeValType(I31RefType)]),
+        shine_tree.empty,
+        shine_tree.from_list([RefTypeValType(I31RefType)]),
       ))
     AnyConvertExtern ->
       Ok(InstructionType(
-        finger_tree.from_list([RefTypeValType(ExternRefType)]),
-        finger_tree.from_list([RefTypeValType(AnyRefType)]),
+        shine_tree.from_list([RefTypeValType(ExternRefType)]),
+        shine_tree.from_list([RefTypeValType(AnyRefType)]),
       ))
     ExternConvertAny ->
       Ok(InstructionType(
-        finger_tree.from_list([RefTypeValType(AnyRefType)]),
-        finger_tree.from_list([RefTypeValType(ExternRefType)]),
+        shine_tree.from_list([RefTypeValType(AnyRefType)]),
+        shine_tree.from_list([RefTypeValType(ExternRefType)]),
       ))
     I64Store(_) | I64Store16(_) | I64Store8(_) | I64Store32(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType, I64ValType]),
-        finger_tree.new(),
+        shine_tree.from_list([I32ValType, I64ValType]),
+        shine_tree.empty,
       ))
     I32Store(_) | I32Store16(_) | I32Store8(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType, I32ValType]),
-        finger_tree.new(),
+        shine_tree.from_list([I32ValType, I32ValType]),
+        shine_tree.empty,
       ))
     F64Store(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType, F64ValType]),
-        finger_tree.new(),
+        shine_tree.from_list([I32ValType, F64ValType]),
+        shine_tree.empty,
       ))
     F32Store(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType, F32ValType]),
-        finger_tree.new(),
+        shine_tree.from_list([I32ValType, F32ValType]),
+        shine_tree.empty,
       ))
     V128Store(_)
     | V128Store8Lane(_, _)
@@ -1484,38 +1481,38 @@ pub fn get_instruction_type(
     | V128Store32Lane(_, _)
     | V128Store64Lane(_, _) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType, V128ValType]),
-        finger_tree.new(),
+        shine_tree.from_list([I32ValType, V128ValType]),
+        shine_tree.empty,
       ))
     V128Load8Lane(_, _)
     | V128Load16Lane(_, _)
     | V128Load32Lane(_, _)
     | V128Load64Lane(_, _) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType, V128ValType]),
-        finger_tree.from_list([V128ValType]),
+        shine_tree.from_list([I32ValType, V128ValType]),
+        shine_tree.from_list([V128ValType]),
       ))
     MemorySize ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([I32ValType])))
+      Ok(InstructionType(shine_tree.empty, shine_tree.from_list([I32ValType])))
     MemoryFill | MemoryCopy | MemoryInit(_) ->
       Ok(InstructionType(
-        finger_tree.from_list([I32ValType, I32ValType, I32ValType]),
-        finger_tree.new(),
+        shine_tree.from_list([I32ValType, I32ValType, I32ValType]),
+        shine_tree.empty,
       ))
-    DataDrop(_) -> Ok(InstructionType(finger_tree.new(), finger_tree.new()))
+    DataDrop(_) -> Ok(InstructionType(shine_tree.empty, shine_tree.empty))
   }
 }
 
 /// An expression is a "End" [0x0B] terminated sequence of instructions that describe a
 /// calculated value.
 pub type Expr {
-  Expr(insts: FingerTree(Instruction))
+  Expr(insts: ShineTree(Instruction))
 }
 
 /// Expanding a deftype extracts the "CompositeType" of the referenced subtype it points to.
 pub fn def_type_expand(dt: DefType) {
   let DefType(RecType(st), idx) = dt
-  use st <- result.map(st |> finger_tree.get(idx))
+  use st <- result.map(st |> shine_tree.get(idx))
   st.ct
 }
 
@@ -1563,8 +1560,8 @@ pub type Global {
 /// used to initialize tables.
 /// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#element-segments
 pub type Elem {
-  ElemFuncs(type_: RefType, init: FingerTree(FuncIDX), mode: ElemMode)
-  ElemExpressions(type_: RefType, init: FingerTree(Expr), mode: ElemMode)
+  ElemFuncs(type_: RefType, init: ShineTree(FuncIDX), mode: ElemMode)
+  ElemExpressions(type_: RefType, init: ShineTree(Expr), mode: ElemMode)
 }
 
 /// An element segment defines a sequence of expressions used to describe items that can be used in a
@@ -1598,7 +1595,7 @@ pub type Export {
 
 /// A WebAssembly function body defined by it's locals and an expression.
 pub type Code {
-  Code(locals: FingerTree(Locals), body: Expr)
+  Code(locals: ShineTree(Locals), body: Expr)
 }
 
 /// Data segments can be used to initialize a range of memory from a static vector of bytes.

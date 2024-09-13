@@ -1,7 +1,6 @@
 import gleam/option.{type Option, None, Some}
 import gleam/set.{type Set}
 import internal/binary/modules
-import internal/finger_tree.{type FingerTree}
 import internal/structure/modules.{
   type BinaryModule, type CustomSection, type ExportSection,
   type FunctionSection, type GlobalSection, type MemorySection,
@@ -24,6 +23,7 @@ import internal/structure/types.{
   StructCompositeType, StructType, SubType, Table, TableExport, TableIDX,
   TableImport, TableType, TypeIDX, Var,
 }
+import shine_tree.{type ShineTree}
 
 pub const new = structure_modules.binary_module_new
 
@@ -448,10 +448,10 @@ pub fn custom_section(module: BinaryModule, name: String, data: BitArray) {
   }
 }
 
-fn add_to_optional_list(items: Option(FingerTree(u)), item: u) {
+fn add_to_optional_list(items: Option(ShineTree(u)), item: u) {
   case items {
-    Some(items) -> Some(finger_tree.push(items, item))
-    None -> Some(finger_tree.single(item))
+    Some(items) -> Some(shine_tree.push(items, item))
+    None -> Some(shine_tree.single(item))
   }
 }
 
@@ -460,14 +460,11 @@ pub fn add_type(module: BinaryModule, type_: RecType) {
   let BinaryModule(types: types, ..) = module
   case types {
     None ->
-      BinaryModule(
-        ..module,
-        types: Some(TypeSection(finger_tree.single(type_))),
-      )
+      BinaryModule(..module, types: Some(TypeSection(shine_tree.single(type_))))
     Some(TypeSection(types)) ->
       BinaryModule(
         ..module,
-        types: Some(TypeSection(finger_tree.push(types, type_))),
+        types: Some(TypeSection(shine_tree.push(types, type_))),
       )
   }
 }
@@ -481,14 +478,14 @@ pub fn add_func_type(
   let func_type =
     SubType(
       False,
-      finger_tree.empty,
+      shine_tree.empty,
       FuncCompositeType(FuncType(
-        finger_tree.from_list(parameters),
-        finger_tree.from_list(results),
+        shine_tree.from_list(parameters),
+        shine_tree.from_list(results),
       )),
     )
 
-  add_type(module, RecType(finger_tree.single(func_type)))
+  add_type(module, RecType(shine_tree.single(func_type)))
 }
 
 /// Add a new concrete ArrayType to the TypeSection
@@ -496,10 +493,10 @@ pub fn add_array_type(module: BinaryModule, element_type: FieldType) {
   let array_type =
     SubType(
       False,
-      finger_tree.empty,
+      shine_tree.empty,
       ArrayCompositeType(ArrayType(element_type)),
     )
-  add_type(module, RecType(finger_tree.single(array_type)))
+  add_type(module, RecType(shine_tree.single(array_type)))
 }
 
 // Add a new StructType to the TypeSection
@@ -507,11 +504,11 @@ pub fn add_struct_type(module: BinaryModule, fields: List(FieldType)) {
   let struct_type =
     SubType(
       False,
-      finger_tree.empty,
-      StructCompositeType(StructType(finger_tree.from_list(fields))),
+      shine_tree.empty,
+      StructCompositeType(StructType(shine_tree.from_list(fields))),
     )
 
-  add_type(module, RecType(finger_tree.single(struct_type)))
+  add_type(module, RecType(shine_tree.single(struct_type)))
 }
 
 // Add a new StructType to the TypeSection that is marked as "final"
@@ -519,11 +516,11 @@ pub fn add_final_struct_type(module: BinaryModule, fields: List(FieldType)) {
   let struct_type =
     SubType(
       True,
-      finger_tree.empty,
-      StructCompositeType(StructType(finger_tree.from_list(fields))),
+      shine_tree.empty,
+      StructCompositeType(StructType(shine_tree.from_list(fields))),
     )
 
-  add_type(module, RecType(finger_tree.single(struct_type)))
+  add_type(module, RecType(shine_tree.single(struct_type)))
 }
 
 /// Import a function from the host. The module_name and name are used to identify the
@@ -542,9 +539,7 @@ pub fn import_func(
       BinaryModule(
         ..module,
         imports: Some(
-          ImportSection(
-            finger_tree.single(FuncImport(module_name, name, type_)),
-          ),
+          ImportSection(shine_tree.single(FuncImport(module_name, name, type_))),
         ),
       )
 
@@ -552,7 +547,7 @@ pub fn import_func(
       BinaryModule(
         ..module,
         imports: Some(
-          ImportSection(finger_tree.push(
+          ImportSection(shine_tree.push(
             imports,
             FuncImport(module_name, name, type_),
           )),
@@ -584,7 +579,7 @@ pub fn import_global(
         ..module,
         imports: Some(
           ImportSection(
-            finger_tree.single(GlobalImport(
+            shine_tree.single(GlobalImport(
               module_name,
               name,
               GlobalType(vt, mut),
@@ -596,7 +591,7 @@ pub fn import_global(
       BinaryModule(
         ..module,
         imports: Some(
-          ImportSection(finger_tree.push(
+          ImportSection(shine_tree.push(
             imports,
             GlobalImport(module_name, name, GlobalType(vt, mut)),
           )),
@@ -622,7 +617,7 @@ pub fn import_table(
         ..module,
         imports: Some(
           ImportSection(
-            finger_tree.single(TableImport(
+            shine_tree.single(TableImport(
               module_name,
               name,
               TableType(ref_type, limits),
@@ -634,7 +629,7 @@ pub fn import_table(
       BinaryModule(
         ..module,
         imports: Some(
-          ImportSection(finger_tree.push(
+          ImportSection(shine_tree.push(
             imports,
             TableImport(module_name, name, TableType(ref_type, limits)),
           )),
@@ -661,7 +656,7 @@ pub fn import_memory(
         ..module,
         imports: Some(
           ImportSection(
-            finger_tree.single(MemImport(
+            shine_tree.single(MemImport(
               module_name,
               name,
               MemType(Limits(min, max)),
@@ -673,7 +668,7 @@ pub fn import_memory(
       BinaryModule(
         ..module,
         imports: Some(
-          ImportSection(finger_tree.push(
+          ImportSection(shine_tree.push(
             imports,
             MemImport(module_name, name, MemType(Limits(min, max))),
           )),
@@ -697,13 +692,13 @@ pub fn append_function_type_index(module: BinaryModule, type_: TypeIDX) {
     BinaryModule(functions: None, ..), TypeIDX(_) ->
       BinaryModule(
         ..module,
-        functions: Some(FunctionSection(finger_tree.single(type_))),
+        functions: Some(FunctionSection(shine_tree.single(type_))),
       )
 
     BinaryModule(functions: Some(FunctionSection(functions)), ..), TypeIDX(_) ->
       BinaryModule(
         ..module,
-        functions: Some(FunctionSection(finger_tree.push(functions, type_))),
+        functions: Some(FunctionSection(shine_tree.push(functions, type_))),
       )
 
     _, _ -> panic as "Invalid type index"
@@ -725,12 +720,12 @@ pub fn add_table(
     None ->
       BinaryModule(
         ..module,
-        tables: Some(TableSection(finger_tree.single(table))),
+        tables: Some(TableSection(shine_tree.single(table))),
       )
     Some(TableSection(tables)) ->
       BinaryModule(
         ..module,
-        tables: Some(TableSection(finger_tree.push(tables, table))),
+        tables: Some(TableSection(shine_tree.push(tables, table))),
       )
   }
 }
@@ -744,7 +739,7 @@ pub fn add_memory(module: BinaryModule, memory: MemType) {
     None ->
       BinaryModule(
         ..module,
-        memories: Some(MemorySection(finger_tree.single(memory))),
+        memories: Some(MemorySection(shine_tree.single(memory))),
       )
     _ -> panic as "Only one memory is allowed per module."
   }
@@ -766,12 +761,12 @@ pub fn add_global(module: BinaryModule, vt: ValType, mut: Bool, init: Expr) {
     None ->
       BinaryModule(
         ..module,
-        globals: Some(GlobalSection(finger_tree.single(global))),
+        globals: Some(GlobalSection(shine_tree.single(global))),
       )
     Some(GlobalSection(globals)) ->
       BinaryModule(
         ..module,
-        globals: Some(GlobalSection(finger_tree.push(globals, global))),
+        globals: Some(GlobalSection(shine_tree.push(globals, global))),
       )
   }
 }
@@ -792,19 +787,19 @@ pub fn export_func(module: BinaryModule, name: String, func: FuncIDX) {
     None ->
       BinaryModule(
         ..module,
-        exports: Some(ExportSection(finger_tree.single(FuncExport(name, func)))),
+        exports: Some(ExportSection(shine_tree.single(FuncExport(name, func)))),
       )
     Some(ExportSection(exports)) -> {
       let assert Ok(_) =
         exports
-        |> finger_tree.try_reducel(
+        |> shine_tree.try_foldl(
           set.new() |> set.insert(name),
           unique_export_name,
         )
       BinaryModule(
         ..module,
         exports: Some(
-          ExportSection(finger_tree.push(exports, FuncExport(name, func))),
+          ExportSection(shine_tree.push(exports, FuncExport(name, func))),
         ),
       )
     }
@@ -820,20 +815,20 @@ pub fn export_table(module: BinaryModule, name: String, table: TableIDX) {
       BinaryModule(
         ..module,
         exports: Some(
-          ExportSection(finger_tree.single(TableExport(name, table))),
+          ExportSection(shine_tree.single(TableExport(name, table))),
         ),
       )
     Some(ExportSection(exports)) -> {
       let assert Ok(_) =
         exports
-        |> finger_tree.try_reducel(
+        |> shine_tree.try_foldl(
           set.new() |> set.insert(name),
           unique_export_name,
         )
       BinaryModule(
         ..module,
         exports: Some(
-          ExportSection(finger_tree.push(exports, TableExport(name, table))),
+          ExportSection(shine_tree.push(exports, TableExport(name, table))),
         ),
       )
     }
@@ -851,21 +846,19 @@ pub fn export_memory(module: BinaryModule, name: String, memory: MemIDX) {
     None ->
       BinaryModule(
         ..module,
-        exports: Some(
-          ExportSection(finger_tree.single(MemExport(name, memory))),
-        ),
+        exports: Some(ExportSection(shine_tree.single(MemExport(name, memory)))),
       )
     Some(ExportSection(exports)) -> {
       let assert Ok(_) =
         exports
-        |> finger_tree.try_reducel(
+        |> shine_tree.try_foldl(
           set.new() |> set.insert(name),
           unique_export_name,
         )
       BinaryModule(
         ..module,
         exports: Some(
-          ExportSection(finger_tree.push(exports, MemExport(name, memory))),
+          ExportSection(shine_tree.push(exports, MemExport(name, memory))),
         ),
       )
     }
@@ -881,20 +874,20 @@ pub fn export_global(module: BinaryModule, name: String, global: GlobalIDX) {
       BinaryModule(
         ..module,
         exports: Some(
-          ExportSection(finger_tree.single(GlobalExport(name, global))),
+          ExportSection(shine_tree.single(GlobalExport(name, global))),
         ),
       )
     Some(ExportSection(exports)) -> {
       let assert Ok(_) =
         exports
-        |> finger_tree.try_reducel(
+        |> shine_tree.try_foldl(
           set.new() |> set.insert(name),
           unique_export_name,
         )
       BinaryModule(
         ..module,
         exports: Some(
-          ExportSection(finger_tree.push(exports, GlobalExport(name, global))),
+          ExportSection(shine_tree.push(exports, GlobalExport(name, global))),
         ),
       )
     }
@@ -921,9 +914,9 @@ pub fn active_funcs_element_segment(
         ..module,
         elements: Some(
           ElementSection(
-            finger_tree.single(ElemFuncs(
+            shine_tree.single(ElemFuncs(
               HeapTypeRefType(FuncHeapType, False),
-              finger_tree.from_list(funcs),
+              shine_tree.from_list(funcs),
               ActiveElemMode(table_index, offset),
             )),
           ),
@@ -933,11 +926,11 @@ pub fn active_funcs_element_segment(
       BinaryModule(
         ..module,
         elements: Some(
-          ElementSection(finger_tree.push(
+          ElementSection(shine_tree.push(
             elements,
             ElemFuncs(
               HeapTypeRefType(FuncHeapType, False),
-              finger_tree.from_list(funcs),
+              shine_tree.from_list(funcs),
               ActiveElemMode(table_index, offset),
             ),
           )),
@@ -955,9 +948,9 @@ pub fn passive_funcs_element_segment(module: BinaryModule, funcs: List(FuncIDX))
         ..module,
         elements: Some(
           ElementSection(
-            finger_tree.single(ElemFuncs(
+            shine_tree.single(ElemFuncs(
               HeapTypeRefType(FuncHeapType, False),
-              finger_tree.from_list(funcs),
+              shine_tree.from_list(funcs),
               PassiveElemMode,
             )),
           ),
@@ -967,11 +960,11 @@ pub fn passive_funcs_element_segment(module: BinaryModule, funcs: List(FuncIDX))
       BinaryModule(
         ..module,
         elements: Some(
-          ElementSection(finger_tree.push(
+          ElementSection(shine_tree.push(
             elements,
             ElemFuncs(
               HeapTypeRefType(FuncHeapType, False),
-              finger_tree.from_list(funcs),
+              shine_tree.from_list(funcs),
               PassiveElemMode,
             ),
           )),
@@ -992,9 +985,9 @@ pub fn declarative_funcs_element_segment(
         ..module,
         elements: Some(
           ElementSection(
-            finger_tree.single(ElemFuncs(
+            shine_tree.single(ElemFuncs(
               HeapTypeRefType(FuncHeapType, False),
-              finger_tree.from_list(funcs),
+              shine_tree.from_list(funcs),
               DeclarativeElemMode,
             )),
           ),
@@ -1004,11 +997,11 @@ pub fn declarative_funcs_element_segment(
       BinaryModule(
         ..module,
         elements: Some(
-          ElementSection(finger_tree.push(
+          ElementSection(shine_tree.push(
             elements,
             ElemFuncs(
               HeapTypeRefType(FuncHeapType, False),
-              finger_tree.from_list(funcs),
+              shine_tree.from_list(funcs),
               DeclarativeElemMode,
             ),
           )),
@@ -1034,9 +1027,9 @@ pub fn active_element_segment(
         ..module,
         elements: Some(
           ElementSection(
-            finger_tree.single(ElemExpressions(
+            shine_tree.single(ElemExpressions(
               ref_type,
-              finger_tree.from_list(exprs),
+              shine_tree.from_list(exprs),
               ActiveElemMode(table_index, offset),
             )),
           ),
@@ -1047,11 +1040,11 @@ pub fn active_element_segment(
       BinaryModule(
         ..module,
         elements: Some(
-          ElementSection(finger_tree.push(
+          ElementSection(shine_tree.push(
             elements,
             ElemExpressions(
               ref_type,
-              finger_tree.from_list(exprs),
+              shine_tree.from_list(exprs),
               ActiveElemMode(table_index, offset),
             ),
           )),
@@ -1074,9 +1067,9 @@ pub fn passive_element_segment(
         ..module,
         elements: Some(
           ElementSection(
-            finger_tree.single(ElemExpressions(
+            shine_tree.single(ElemExpressions(
               ref_type,
-              finger_tree.from_list(exprs),
+              shine_tree.from_list(exprs),
               PassiveElemMode,
             )),
           ),
@@ -1087,11 +1080,11 @@ pub fn passive_element_segment(
       BinaryModule(
         ..module,
         elements: Some(
-          ElementSection(finger_tree.push(
+          ElementSection(shine_tree.push(
             elements,
             ElemExpressions(
               ref_type,
-              finger_tree.from_list(exprs),
+              shine_tree.from_list(exprs),
               PassiveElemMode,
             ),
           )),
@@ -1114,9 +1107,9 @@ pub fn declarative_element_segment(
         ..module,
         elements: Some(
           ElementSection(
-            finger_tree.single(ElemExpressions(
+            shine_tree.single(ElemExpressions(
               ref_type,
-              finger_tree.from_list(exprs),
+              shine_tree.from_list(exprs),
               DeclarativeElemMode,
             )),
           ),
@@ -1127,11 +1120,11 @@ pub fn declarative_element_segment(
       BinaryModule(
         ..module,
         elements: Some(
-          ElementSection(finger_tree.push(
+          ElementSection(shine_tree.push(
             elements,
             ElemExpressions(
               ref_type,
-              finger_tree.from_list(exprs),
+              shine_tree.from_list(exprs),
               DeclarativeElemMode,
             ),
           )),
@@ -1142,14 +1135,14 @@ pub fn declarative_element_segment(
 
 fn concatenate_locals(locals: List(ValType)) {
   case locals {
-    [] -> finger_tree.new()
-    [a, ..rest] -> do_concatenate_locals(rest, finger_tree.new(), #(1, a))
+    [] -> shine_tree.empty
+    [a, ..rest] -> do_concatenate_locals(rest, shine_tree.empty, #(1, a))
   }
 }
 
 fn do_concatenate_locals(
   locals: List(ValType),
-  acc: FingerTree(Locals),
+  acc: ShineTree(Locals),
   current: #(Int, ValType),
 ) {
   case locals, current {
@@ -1159,13 +1152,13 @@ fn do_concatenate_locals(
       let assert Ok(count) = u32(count)
 
       let locals = Locals(count, current_type)
-      do_concatenate_locals(rest, finger_tree.push(acc, locals), #(1, val_type))
+      do_concatenate_locals(rest, shine_tree.push(acc, locals), #(1, val_type))
     }
     [], #(count, current_type) -> {
       let assert Ok(count) = u32(count)
 
       let locals = Locals(count, current_type)
-      finger_tree.push(acc, locals)
+      shine_tree.push(acc, locals)
     }
   }
 }
@@ -1182,12 +1175,12 @@ pub fn add_code(module: BinaryModule, locals: List(ValType), body: Expr) {
     None ->
       BinaryModule(
         ..module,
-        code: Some(CodeSection(finger_tree.single(Code(locals, body)))),
+        code: Some(CodeSection(shine_tree.single(Code(locals, body)))),
       )
     Some(CodeSection(code)) ->
       BinaryModule(
         ..module,
-        code: Some(CodeSection(finger_tree.push(code, Code(locals, body)))),
+        code: Some(CodeSection(shine_tree.push(code, Code(locals, body)))),
       )
   }
 }
@@ -1206,14 +1199,14 @@ pub fn add_active_data(
       BinaryModule(
         ..module,
         data: Some(
-          DataSection(finger_tree.single(ActiveData(mem_idx, offset, data))),
+          DataSection(shine_tree.single(ActiveData(mem_idx, offset, data))),
         ),
       )
     Some(DataSection(data_section)) ->
       BinaryModule(
         ..module,
         data: Some(
-          DataSection(finger_tree.push(
+          DataSection(shine_tree.push(
             data_section,
             ActiveData(mem_idx, offset, data),
           )),
@@ -1230,13 +1223,13 @@ pub fn add_passive_data(module: BinaryModule, data: BitArray) {
     None ->
       BinaryModule(
         ..module,
-        data: Some(DataSection(finger_tree.single(PassiveData(data)))),
+        data: Some(DataSection(shine_tree.single(PassiveData(data)))),
       )
     Some(DataSection(data_section)) ->
       BinaryModule(
         ..module,
         data: Some(
-          DataSection(finger_tree.push(data_section, PassiveData(data))),
+          DataSection(shine_tree.push(data_section, PassiveData(data))),
         ),
       )
   }
@@ -1351,18 +1344,18 @@ pub fn decode(module: BitArray) {
   modules.decode_module(module)
 }
 
-/// ShineCoder's FingerTree is an efficient data structure for
+/// ShineCoder's ShineTree is an efficient data structure for
 /// storing and manipulating the ends of ordered vector data.
 /// This function takes a list and converts it into an opaque
-/// FingerTree.
+/// ShineTree.
 pub fn to_vector(values: List(u)) {
-  values |> finger_tree.from_list
+  values |> shine_tree.from_list
 }
 
-/// ShineCoder's FingerTree is an efficient data structure for
+/// ShineCoder's ShineTree is an efficient data structure for
 /// storing and manipulating the ends of ordered vector data.
-/// This function takes a FingerTree and converts it into a
+/// This function takes a ShineTree and converts it into a
 /// normal List.
-pub fn to_list(values: FingerTree(u)) {
-  values |> finger_tree.to_list
+pub fn to_list(values: ShineTree(u)) {
+  values |> shine_tree.to_list
 }

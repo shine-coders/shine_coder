@@ -1,31 +1,31 @@
-import internal/finger_tree
 import internal/structure/types.{
   type FieldType, type FuncType, type StructType, type SubType, type ValType,
   ArrayCompositeType, ArrayType, FuncCompositeType, FuncType, RecType,
   StructCompositeType, StructType, SubType,
 }
+import shine_tree
 
 pub fn from_sub_types(sub_types: List(SubType)) {
-  RecType(sub_types |> finger_tree.from_list)
+  RecType(sub_types |> shine_tree.from_list)
 }
 
 pub fn from_func_type(func_type: FuncType) {
   RecType(
-    finger_tree.from_list([
-      SubType(True, finger_tree.new(), FuncCompositeType(func_type)),
+    shine_tree.from_list([
+      SubType(True, shine_tree.empty, FuncCompositeType(func_type)),
     ]),
   )
 }
 
 pub fn func_type(parameters: List(ValType), results: List(ValType)) {
   RecType(
-    finger_tree.from_list([
+    shine_tree.from_list([
       SubType(
         True,
-        finger_tree.new(),
+        shine_tree.empty,
         FuncCompositeType(FuncType(
-          finger_tree.from_list(parameters),
-          finger_tree.from_list(results),
+          shine_tree.from_list(parameters),
+          shine_tree.from_list(results),
         )),
       ),
     ]),
@@ -34,18 +34,18 @@ pub fn func_type(parameters: List(ValType), results: List(ValType)) {
 
 pub fn from_struct_type(struct_type: StructType) {
   RecType(
-    finger_tree.from_list([
-      SubType(True, finger_tree.new(), StructCompositeType(struct_type)),
+    shine_tree.from_list([
+      SubType(True, shine_tree.empty, StructCompositeType(struct_type)),
     ]),
   )
 }
 
 pub fn array_type(element_type: FieldType) {
   RecType(
-    finger_tree.from_list([
+    shine_tree.from_list([
       SubType(
         True,
-        finger_tree.new(),
+        shine_tree.empty,
         ArrayCompositeType(ArrayType(element_type)),
       ),
     ]),

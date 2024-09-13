@@ -1,6 +1,6 @@
 import builder/types/composite_type
 import builder/types/field_type
-
+import gleam/option.{None}
 import visitor
 import visitor/visit_test_variant
 
@@ -13,6 +13,7 @@ pub fn visit_func_composite_type() {
     visitor.on_enter_func_composite_type,
     visitor.on_exit_func_composite_type,
     visitor.visit_composite_type,
+    None,
   )
 }
 
@@ -25,6 +26,7 @@ pub fn visit_struct_composite_type() {
     visitor.on_enter_struct_composite_type,
     visitor.on_exit_struct_composite_type,
     visitor.visit_composite_type,
+    None,
   )
 }
 
@@ -37,5 +39,6 @@ pub fn visit_array_composite_type() {
     visitor.on_enter_array_composite_type,
     visitor.on_exit_array_composite_type,
     visitor.visit_composite_type,
+    None,
   )
 }

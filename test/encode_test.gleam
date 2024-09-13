@@ -10,13 +10,13 @@ import internal/binary/common
 import internal/binary/modules
 import internal/binary/types
 import internal/binary/values
-import internal/finger_tree
 import internal/structure/modules as structure_modules
 import internal/structure/numbers
 import internal/structure/types.{type FuncIDX, Expr, RefFunc} as structure_types
+import shine_tree
 
 pub fn func_idx_to_expr(expr: FuncIDX) {
-  Expr([RefFunc(expr)] |> finger_tree.from_list)
+  Expr([RefFunc(expr)] |> shine_tree.from_list)
 }
 
 fn should_equal_helper(val: Result(BytesBuilder, String), expected: BitArray) {
@@ -174,9 +174,9 @@ pub fn encode_heap_type_ref_type_test() {
 }
 
 pub fn encode_result_type_test() {
-  let empty = finger_tree.new()
+  let empty = shine_tree.empty
   let four =
-    finger_tree.from_list([
+    shine_tree.from_list([
       structure_types.I32ValType,
       structure_types.I64ValType,
       structure_types.F32ValType,
@@ -245,13 +245,13 @@ pub fn encode_array_type_test() {
 
 pub fn encode_struct_type_test() {
   bytes_builder.new()
-  |> types.encode_struct_type(structure_types.StructType(finger_tree.new()))
+  |> types.encode_struct_type(structure_types.StructType(shine_tree.empty))
   |> should_equal_helper(<<0>>)
 
   bytes_builder.new()
   |> types.encode_struct_type(
     structure_types.StructType(
-      finger_tree.from_list([
+      shine_tree.from_list([
         structure_types.FieldType(
           structure_types.ValTypeStorageType(structure_types.I32ValType),
           structure_types.Const,
@@ -288,8 +288,8 @@ pub fn encode_composite_type_test() {
   bytes_builder.new()
   |> types.encode_composite_type(
     structure_types.FuncCompositeType(structure_types.FuncType(
-      finger_tree.new(),
-      finger_tree.new(),
+      shine_tree.empty,
+      shine_tree.empty,
     )),
   )
   |> should_equal_helper(<<0x60, 0x00, 0x00>>)
@@ -298,7 +298,7 @@ pub fn encode_composite_type_test() {
   |> types.encode_composite_type(
     structure_types.StructCompositeType(
       structure_types.StructType(
-        finger_tree.from_list([
+        shine_tree.from_list([
           structure_types.FieldType(
             structure_types.ValTypeStorageType(structure_types.I32ValType),
             structure_types.Const,
@@ -359,7 +359,7 @@ pub fn encode_rec_type_test() {
   let subtype_one =
     structure_types.SubType(
       True,
-      finger_tree.new(),
+      shine_tree.empty,
       structure_types.ArrayCompositeType(
         structure_types.ArrayType(structure_types.FieldType(
           structure_types.ValTypeStorageType(structure_types.I32ValType),
@@ -370,7 +370,7 @@ pub fn encode_rec_type_test() {
 
   bytes_builder.new()
   |> types.encode_rec_type(
-    structure_types.RecType(finger_tree.from_list([subtype_one])),
+    structure_types.RecType(shine_tree.from_list([subtype_one])),
   )
   |> should_equal_helper(<<0x5E, 0x7F, 0x00>>)
 
@@ -379,13 +379,13 @@ pub fn encode_rec_type_test() {
   let subtype_two =
     structure_types.SubType(
       False,
-      finger_tree.from_list([
+      shine_tree.from_list([
         structure_types.TypeIDX(idx_one),
         structure_types.TypeIDX(idx_two),
       ]),
       structure_types.StructCompositeType(
         structure_types.StructType(
-          finger_tree.from_list([
+          shine_tree.from_list([
             structure_types.FieldType(
               structure_types.ValTypeStorageType(structure_types.I32ValType),
               structure_types.Const,
@@ -397,13 +397,13 @@ pub fn encode_rec_type_test() {
 
   bytes_builder.new()
   |> types.encode_rec_type(
-    structure_types.RecType(finger_tree.from_list([subtype_two])),
+    structure_types.RecType(shine_tree.from_list([subtype_two])),
   )
   |> should_equal_helper(<<0x50, 0x02, 0x01, 0x02, 0x5F, 0x01, 0x7F, 0x00>>)
 
   bytes_builder.new()
   |> types.encode_rec_type(
-    structure_types.RecType(finger_tree.from_list([subtype_one, subtype_two])),
+    structure_types.RecType(shine_tree.from_list([subtype_one, subtype_two])),
   )
   |> should_equal_helper(<<
     0x4E, 0x02, 0x5E, 0x7F, 0x00, 0x50, 0x02, 0x01, 0x02, 0x5F, 0x01, 0x7F, 0x00,
@@ -439,7 +439,7 @@ pub fn custom_section_test() {
 }
 
 pub fn type_section_test() {
-  let empty_type_section = structure_modules.TypeSection(finger_tree.new())
+  let empty_type_section = structure_modules.TypeSection(shine_tree.empty)
 
   bytes_builder.new()
   |> modules.encode_type_section(empty_type_section)
@@ -447,10 +447,10 @@ pub fn type_section_test() {
 
   let array_type_example =
     structure_types.RecType(
-      finger_tree.from_list([
+      shine_tree.from_list([
         structure_types.SubType(
           True,
-          finger_tree.new(),
+          shine_tree.empty,
           structure_types.ArrayCompositeType(
             structure_types.ArrayType(structure_types.FieldType(
               structure_types.ValTypeStorageType(structure_types.I32ValType),
@@ -465,7 +465,7 @@ pub fn type_section_test() {
 
   let example_type_section_length = <<0x04>>
   let example_type_section =
-    structure_modules.TypeSection(finger_tree.from_list([array_type_example]))
+    structure_modules.TypeSection(shine_tree.from_list([array_type_example]))
 
   bytes_builder.new()
   |> modules.encode_type_section(example_type_section)
@@ -478,7 +478,7 @@ pub fn type_section_test() {
 }
 
 pub fn import_section_test() {
-  let empty_import_section = structure_modules.ImportSection(finger_tree.new())
+  let empty_import_section = structure_modules.ImportSection(shine_tree.empty)
 
   bytes_builder.new()
   |> modules.encode_import_section(empty_import_section)
@@ -511,9 +511,7 @@ pub fn import_section_test() {
   let func_import_bytes_length = bit_array.byte_size(func_import_bytes)
 
   let example_import_section =
-    structure_modules.ImportSection(
-      finger_tree.from_list([func_import_example]),
-    )
+    structure_modules.ImportSection(shine_tree.from_list([func_import_example]))
 
   bytes_builder.new()
   |> modules.encode_import_section(example_import_section)
@@ -526,7 +524,7 @@ pub fn import_section_test() {
 
 pub fn function_section_test() {
   let empty_function_section =
-    structure_modules.FunctionSection(finger_tree.new())
+    structure_modules.FunctionSection(shine_tree.empty)
 
   bytes_builder.new()
   |> modules.encode_function_section(empty_function_section)
@@ -534,10 +532,10 @@ pub fn function_section_test() {
 
   let assert Ok(indexes) =
     [1, 2, 3, 4]
-    |> finger_tree.from_list
-    |> finger_tree.try_map(numbers.u32)
+    |> shine_tree.from_list
+    |> shine_tree.try_map(numbers.u32)
 
-  let indexes = indexes |> finger_tree.map(structure_types.TypeIDX)
+  let indexes = indexes |> shine_tree.map(structure_types.TypeIDX)
 
   let function_section = structure_modules.FunctionSection(indexes)
 
@@ -547,7 +545,7 @@ pub fn function_section_test() {
 }
 
 pub fn table_section_test() {
-  let empty_table_section = structure_modules.TableSection(finger_tree.new())
+  let empty_table_section = structure_modules.TableSection(shine_tree.empty)
 
   bytes_builder.new()
   |> modules.encode_table_section(empty_table_section)
@@ -568,7 +566,7 @@ pub fn table_section_test() {
 
   bytes_builder.new()
   |> modules.encode_table_section(
-    structure_modules.TableSection(finger_tree.from_list([example_table])),
+    structure_modules.TableSection(shine_tree.from_list([example_table])),
   )
   |> should_equal_helper(<<
     0x04,
@@ -595,13 +593,13 @@ pub fn table_section_test() {
 
   bytes_builder.new()
   |> modules.encode_table_section(
-    structure_modules.TableSection(finger_tree.from_list([example_table_init])),
+    structure_modules.TableSection(shine_tree.from_list([example_table_init])),
   )
   |> should_equal_helper(<<0x04, 0x09, 0x01, example_table_init_bytes:bits>>)
 }
 
 pub fn memory_section_test() {
-  let empty_memory_section = structure_modules.MemorySection(finger_tree.new())
+  let empty_memory_section = structure_modules.MemorySection(shine_tree.empty)
 
   bytes_builder.new()
   |> modules.encode_memory_section(empty_memory_section)
@@ -618,7 +616,7 @@ pub fn memory_section_test() {
 
   bytes_builder.new()
   |> modules.encode_memory_section(
-    structure_modules.MemorySection(finger_tree.from_list([example_memory])),
+    structure_modules.MemorySection(shine_tree.from_list([example_memory])),
   )
   |> should_equal_helper(<<
     0x05,
@@ -629,7 +627,7 @@ pub fn memory_section_test() {
 }
 
 pub fn global_section_test() {
-  let empty_global_section = structure_modules.GlobalSection(finger_tree.new())
+  let empty_global_section = structure_modules.GlobalSection(shine_tree.empty)
 
   bytes_builder.new()
   |> modules.encode_global_section(empty_global_section)
@@ -649,7 +647,7 @@ pub fn global_section_test() {
     )
 
   let global_section =
-    structure_modules.GlobalSection(finger_tree.from_list([example_global]))
+    structure_modules.GlobalSection(shine_tree.from_list([example_global]))
   let global_section_bytes = <<
     0x06, 0x07, 0x01, 0x7F, 0x01, 0x41, 0xC2, 0x00, 0x0B,
   >>
@@ -659,7 +657,7 @@ pub fn global_section_test() {
 }
 
 pub fn export_section_test() {
-  let empty_export_section = structure_modules.ExportSection(finger_tree.new())
+  let empty_export_section = structure_modules.ExportSection(shine_tree.empty)
 
   bytes_builder.new()
   |> modules.encode_export_section(empty_export_section)
@@ -681,7 +679,7 @@ pub fn export_section_test() {
 
   let export_section =
     structure_modules.ExportSection(
-      finger_tree.from_list([
+      shine_tree.from_list([
         func_export,
         table_export,
         mem_export,
@@ -730,8 +728,7 @@ pub fn start_section_test() {
 }
 
 pub fn element_section_test() {
-  let empty_element_section =
-    structure_modules.ElementSection(finger_tree.new())
+  let empty_element_section = structure_modules.ElementSection(shine_tree.empty)
 
   bytes_builder.new()
   |> modules.encode_element_section(empty_element_section)
@@ -752,7 +749,7 @@ pub fn element_section_test() {
 
   let ref_func =
     structure_types.HeapTypeRefType(structure_types.FuncHeapType, False)
-  // Elem(type_: RefType, init: FingerTree(Expr), mode: ElemMode)
+  // Elem(type_: RefType, init: ShineTree(Expr), mode: ElemMode)
 
   let ref_null_i31 =
     structure_types.HeapTypeRefType(structure_types.I31HeapType, True)
@@ -761,17 +758,17 @@ pub fn element_section_test() {
     |> ref.null(structure_types.I31HeapType)
     |> expression.end_unwrap()
 
-  let three_null_i31 = finger_tree.from_list([null_i31, null_i31, null_i31])
+  let three_null_i31 = shine_tree.from_list([null_i31, null_i31, null_i31])
 
   let three_func_idx =
-    finger_tree.from_list([
+    shine_tree.from_list([
       structure_types.FuncIDX(zero),
       structure_types.FuncIDX(one),
       structure_types.FuncIDX(two),
     ])
 
   let three_func_idx_expression =
-    three_func_idx |> finger_tree.map(func_idx_to_expr)
+    three_func_idx |> shine_tree.map(func_idx_to_expr)
 
   // type 0 -> (ref func) (init: FuncIDX*) Active(TableIDX(0), Offset(offset_fourty_two))
   let element_zero =
@@ -945,7 +942,7 @@ pub fn element_section_test() {
 
   let element_section =
     structure_modules.ElementSection(
-      finger_tree.from_list([
+      shine_tree.from_list([
         element_zero,
         element_one,
         element_two,
@@ -1001,7 +998,7 @@ pub fn element_section_test() {
 pub fn code_section_test() {
   let assert Ok(two) = numbers.u32(2)
   let add_locals =
-    finger_tree.from_list([
+    shine_tree.from_list([
       structure_types.Locals(two, structure_types.I32ValType),
     ])
 
@@ -1010,7 +1007,7 @@ pub fn code_section_test() {
 
   let code_section =
     structure_modules.CodeSection(
-      finger_tree.from_list([
+      shine_tree.from_list([
         structure_types.Code(
           add_locals,
           expression.new()
@@ -1079,7 +1076,7 @@ pub fn data_section_test() {
       0x07, 0x08, 0x09,
     >>)
 
-  let empty_data_section = structure_modules.DataSection(finger_tree.new())
+  let empty_data_section = structure_modules.DataSection(shine_tree.empty)
 
   bytes_builder.new()
   |> modules.encode_data_section(empty_data_section)
@@ -1087,7 +1084,7 @@ pub fn data_section_test() {
 
   let data_section =
     structure_modules.DataSection(
-      finger_tree.from_list([active_data_zero_idx, passive_data, active_data]),
+      shine_tree.from_list([active_data_zero_idx, passive_data, active_data]),
     )
 
   let data_section_bytes = <<

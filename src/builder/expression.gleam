@@ -1,41 +1,41 @@
 import gleam/option.{type Option, None, Some}
-import internal/finger_tree.{type FingerTree}
 import internal/structure/types.{
   type BlockType, type Expr, type Instruction, Block, Expr, If, Loop,
 }
+import shine_tree.{type ShineTree}
 
 type BlockDefinition {
   EmptyTop
-  OuterMostBlock(instructions: FingerTree(Instruction))
-  IfBlock(bt: BlockType, instructions: FingerTree(Instruction))
+  OuterMostBlock(instructions: ShineTree(Instruction))
+  IfBlock(bt: BlockType, instructions: ShineTree(Instruction))
   ElseBlock(
     bt: BlockType,
-    if_instructions: FingerTree(Instruction),
-    else_instructions: FingerTree(Instruction),
+    if_instructions: ShineTree(Instruction),
+    else_instructions: ShineTree(Instruction),
   )
-  LoopBlock(bt: BlockType, instructions: FingerTree(Instruction))
-  InlineBlock(bt: BlockType, instructions: FingerTree(Instruction))
+  LoopBlock(bt: BlockType, instructions: ShineTree(Instruction))
+  InlineBlock(bt: BlockType, instructions: ShineTree(Instruction))
 }
 
 pub opaque type ExpressionBuilder {
   ExpressionBuilder(
     result: Option(Expr),
     top: BlockDefinition,
-    block_stack: FingerTree(BlockDefinition),
+    block_stack: ShineTree(BlockDefinition),
   )
 }
 
 pub fn new() -> ExpressionBuilder {
-  ExpressionBuilder(None, OuterMostBlock(finger_tree.empty), finger_tree.empty)
+  ExpressionBuilder(None, OuterMostBlock(shine_tree.empty), shine_tree.empty)
 }
 
 pub fn begin_if(builder: ExpressionBuilder, bt: BlockType) -> ExpressionBuilder {
   let ExpressionBuilder(result, top, block_stack) = builder
   ExpressionBuilder(
     result,
-    IfBlock(bt, finger_tree.empty),
+    IfBlock(bt, shine_tree.empty),
     block_stack
-      |> finger_tree.push(top),
+      |> shine_tree.push(top),
   )
 }
 
@@ -44,7 +44,7 @@ pub fn begin_else(builder: ExpressionBuilder) {
     IfBlock(bt, instructions) ->
       ExpressionBuilder(
         ..builder,
-        top: ElseBlock(bt, instructions, finger_tree.empty),
+        top: ElseBlock(bt, instructions, shine_tree.empty),
       )
     EmptyTop -> panic as "Stack state underflow"
     _ -> panic as "Invalid stack state, cannot start else block"
@@ -57,9 +57,9 @@ pub fn begin_loop(
 ) -> ExpressionBuilder {
   ExpressionBuilder(
     builder.result,
-    LoopBlock(bt, finger_tree.empty),
+    LoopBlock(bt, shine_tree.empty),
     builder.block_stack
-      |> finger_tree.push(builder.top),
+      |> shine_tree.push(builder.top),
   )
 }
 
@@ -69,16 +69,16 @@ pub fn begin_block(
 ) -> ExpressionBuilder {
   ExpressionBuilder(
     builder.result,
-    InlineBlock(bt, finger_tree.empty),
+    InlineBlock(bt, shine_tree.empty),
     builder.block_stack
-      |> finger_tree.push(builder.top),
+      |> shine_tree.push(builder.top),
   )
 }
 
 pub fn end(builder: ExpressionBuilder) {
   case builder {
     ExpressionBuilder(None, OuterMostBlock(instructions), block_stack)
-      if block_stack == finger_tree.empty
+      if block_stack == shine_tree.empty
     -> Ok(ExpressionBuilder(Some(Expr(instructions)), EmptyTop, block_stack))
     ExpressionBuilder(None, IfBlock(bt, if_instructions), block_stack) ->
       do_append(block_stack, If(bt, if_instructions, None))
@@ -98,16 +98,16 @@ pub fn end(builder: ExpressionBuilder) {
 }
 
 fn do_append(
-  next_stack: FingerTree(BlockDefinition),
+  next_stack: ShineTree(BlockDefinition),
   next_instruction: Instruction,
 ) {
-  case next_stack |> finger_tree.pop() {
+  case next_stack |> shine_tree.pop() {
     Ok(#(OuterMostBlock(outer_instructions), next_stack)) ->
       Ok(ExpressionBuilder(
         None,
         OuterMostBlock(
           outer_instructions
-          |> finger_tree.push(next_instruction),
+          |> shine_tree.push(next_instruction),
         ),
         next_stack,
       ))
@@ -117,7 +117,7 @@ fn do_append(
         None,
         IfBlock(
           outer_bt,
-          outer_if_instructions |> finger_tree.push(next_instruction),
+          outer_if_instructions |> shine_tree.push(next_instruction),
         ),
         next_stack,
       ))
@@ -130,7 +130,7 @@ fn do_append(
         ElseBlock(
           outer_bt,
           outer_if_instructions,
-          outer_else_instructions |> finger_tree.push(next_instruction),
+          outer_else_instructions |> shine_tree.push(next_instruction),
         ),
         next_stack,
       ))
@@ -140,7 +140,7 @@ fn do_append(
         None,
         LoopBlock(
           outer_bt,
-          outer_instructions |> finger_tree.push(next_instruction),
+          outer_instructions |> shine_tree.push(next_instruction),
         ),
         next_stack,
       ))
@@ -150,7 +150,7 @@ fn do_append(
         None,
         InlineBlock(
           outer_bt,
-          outer_instructions |> finger_tree.push(next_instruction),
+          outer_instructions |> shine_tree.push(next_instruction),
         ),
         next_stack,
       ))
@@ -163,13 +163,13 @@ pub fn push(builder: ExpressionBuilder, inst: Instruction) {
     OuterMostBlock(instructions) ->
       ExpressionBuilder(
         None,
-        OuterMostBlock(instructions |> finger_tree.push(inst)),
+        OuterMostBlock(instructions |> shine_tree.push(inst)),
         builder.block_stack,
       )
     IfBlock(bt, instructions) ->
       ExpressionBuilder(
         None,
-        IfBlock(bt, instructions |> finger_tree.push(inst)),
+        IfBlock(bt, instructions |> shine_tree.push(inst)),
         builder.block_stack,
       )
     ElseBlock(bt, if_instructions, else_instructions) ->
@@ -178,20 +178,20 @@ pub fn push(builder: ExpressionBuilder, inst: Instruction) {
         ElseBlock(
           bt,
           if_instructions,
-          else_instructions |> finger_tree.push(inst),
+          else_instructions |> shine_tree.push(inst),
         ),
         builder.block_stack,
       )
     LoopBlock(bt, instructions) ->
       ExpressionBuilder(
         None,
-        LoopBlock(bt, instructions |> finger_tree.push(inst)),
+        LoopBlock(bt, instructions |> shine_tree.push(inst)),
         builder.block_stack,
       )
     InlineBlock(bt, instructions) ->
       ExpressionBuilder(
         None,
-        InlineBlock(bt, instructions |> finger_tree.push(inst)),
+        InlineBlock(bt, instructions |> shine_tree.push(inst)),
         builder.block_stack,
       )
     _ -> panic as "Expression completed, cannot push instruction"
@@ -201,7 +201,7 @@ pub fn push(builder: ExpressionBuilder, inst: Instruction) {
 pub fn end_unwrap(builder) {
   case builder {
     ExpressionBuilder(None, OuterMostBlock(instructions), stack)
-      if stack == finger_tree.empty
+      if stack == shine_tree.empty
     -> Expr(instructions)
     _ -> panic as "Unable to unwrap, invalid expression state"
   }

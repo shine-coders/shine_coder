@@ -5,21 +5,21 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import internal/binary/values.{decode_u32, encode_u32}
-import internal/finger_tree.{type FingerTree}
 import internal/structure/numbers.{u32, unwrap_u32}
+import shine_tree.{type ShineTree}
 
 /// Encode a vector of items using the given encoding function
 pub fn encode_vec(
   builder: BytesBuilder,
-  items: FingerTree(u),
+  items: ShineTree(u),
   encode_fn: fn(BytesBuilder, u) -> Result(BytesBuilder, String),
 ) {
   // Vectors are encoded as the number of items (in uleb128) and then each item
-  use size <- result.try(finger_tree.size(items) |> u32)
+  use size <- result.try(shine_tree.size(items) |> u32)
   builder
   |> encode_u32(size)
   // this function is a loop over the items in the vector
-  |> finger_tree.try_reducel(items, _, encode_fn)
+  |> shine_tree.try_foldl(items, _, encode_fn)
 }
 
 /// Decode a vector of items using the given decoding function
@@ -29,21 +29,21 @@ pub fn decode_vec(
 ) {
   // Vectors are encoded as the number of items (in uleb128) and then n items
   use #(size, rest) <- result.try(decode_u32(bits))
-  do_decode_vec(rest, size |> unwrap_u32, finger_tree.new(), decode_fn)
+  do_decode_vec(rest, size |> unwrap_u32, shine_tree.empty, decode_fn)
 }
 
 /// Loop over each item in a vector, and decode them using the given decoding function
 fn do_decode_vec(
   bits: BitArray,
   size: Int,
-  acc: FingerTree(u),
+  acc: ShineTree(u),
   decode_fn: fn(BitArray) -> Result(#(u, BitArray), String),
 ) {
   case size {
     0 -> Ok(#(acc, bits))
     _ -> {
       use #(val, rest) <- result.try(decode_fn(bits))
-      do_decode_vec(rest, size - 1, acc |> finger_tree.push(val), decode_fn)
+      do_decode_vec(rest, size - 1, acc |> shine_tree.push(val), decode_fn)
     }
   }
 }

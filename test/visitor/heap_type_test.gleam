@@ -6,6 +6,7 @@ import internal/structure/types.{
 }
 import visitor
 import visitor/visit_test_variant
+import gleam/option.{None}
 
 pub fn visit_func_heap_type_test() {
   visit_test_variant.run(
@@ -15,6 +16,7 @@ pub fn visit_func_heap_type_test() {
     visitor.on_enter_func_heap_type,
     visitor.on_exit_func_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -26,6 +28,7 @@ pub fn visit_no_func_heap_type_test() {
     visitor.on_enter_no_func_heap_type,
     visitor.on_exit_no_func_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -37,6 +40,7 @@ pub fn visit_extern_heap_type_test() {
     visitor.on_enter_extern_heap_type,
     visitor.on_exit_extern_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -48,6 +52,7 @@ pub fn visit_no_extern_heap_type_test() {
     visitor.on_enter_no_extern_heap_type,
     visitor.on_exit_no_extern_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -59,6 +64,7 @@ pub fn visit_any_heap_type_test() {
     visitor.on_enter_any_heap_type,
     visitor.on_exit_any_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -70,6 +76,7 @@ pub fn visit_eq_heap_type_test() {
     visitor.on_enter_eq_heap_type,
     visitor.on_exit_eq_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -81,6 +88,7 @@ pub fn visit_i31_heap_type_test() {
     visitor.on_enter_i31_heap_type,
     visitor.on_exit_i31_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -92,6 +100,7 @@ pub fn visit_struct_heap_type_test() {
     visitor.on_enter_struct_heap_type,
     visitor.on_exit_struct_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -103,6 +112,7 @@ pub fn visit_array_heap_type_test() {
     visitor.on_enter_array_heap_type,
     visitor.on_exit_array_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -114,6 +124,7 @@ pub fn visit_none_heap_type_test() {
     visitor.on_enter_none_heap_type,
     visitor.on_exit_none_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }
 
@@ -126,5 +137,6 @@ pub fn visit_concrete_heap_type_test() {
     visitor.on_enter_concrete_heap_type,
     visitor.on_exit_concrete_heap_type,
     visitor.visit_heap_type,
+    None,
   )
 }

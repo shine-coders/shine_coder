@@ -11,7 +11,6 @@ import internal/binary/types.{
   encode_ref_type, encode_table_idx, encode_table_type, encode_type_idx,
 }
 import internal/binary/values.{encode_u32}
-import internal/finger_tree.{type FingerTree}
 import internal/structure/modules.{
   type BinaryModule, type CodeSection, type CustomSection, type DataCountSection,
   type DataSection, type ElementSection, type ExportSection,
@@ -29,6 +28,7 @@ import internal/structure/types.{
   GlobalExport, GlobalImport, HeapTypeRefType, Locals, MemExport, MemImport,
   PassiveData, PassiveElemMode, Table, TableExport, TableIDX, TableImport,
 } as structure_types
+import shine_tree.{type ShineTree}
 
 /// The magic header bytes of every web assembly module
 const wasm_magic = <<0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00>>
@@ -625,7 +625,7 @@ pub fn decode_type_section(bits: BitArray) {
 
 /// Decode a set of consecutive custom sections.
 pub fn decode_custom_sections(bits: BitArray) {
-  do_decode_custom_sections(bits, finger_tree.new())
+  do_decode_custom_sections(bits, shine_tree.empty)
 }
 
 fn do_decode_custom_section(rest: BitArray) {
@@ -642,10 +642,10 @@ pub fn decode_custom_section(bits: BitArray) {
 
 /// This method is a helper function for emulating a while loop that continues
 /// until the next wasm binary section isn't a custom one
-fn do_decode_custom_sections(bits: BitArray, acc: FingerTree(CustomSection)) {
+fn do_decode_custom_sections(bits: BitArray, acc: ShineTree(CustomSection)) {
   case decode_custom_section(bits) {
     Ok(#(Some(section), rest)) ->
-      do_decode_custom_sections(rest, acc |> finger_tree.push(section))
+      do_decode_custom_sections(rest, acc |> shine_tree.push(section))
     _ -> Ok(#(Some(acc), bits))
   }
 }
@@ -655,11 +655,11 @@ fn do_decode_custom_sections(bits: BitArray, acc: FingerTree(CustomSection)) {
 /// exhausted.
 pub fn encode_custom_sections(
   builder: BytesBuilder,
-  sections: Option(FingerTree(CustomSection)),
+  sections: Option(ShineTree(CustomSection)),
 ) {
   case sections {
     Some(sections) ->
-      finger_tree.try_reducel(sections, builder, encode_custom_section)
+      shine_tree.try_foldl(sections, builder, encode_custom_section)
     None -> Ok(builder)
   }
 }

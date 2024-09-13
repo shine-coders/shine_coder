@@ -1,22 +1,22 @@
-import internal/finger_tree
 import internal/structure/types.{
   type RefType, type StructType, type TypeIDX, ConcreteHeapType, Const,
   F32ValType, F64ValType, FieldType, HeapTypeRefType, I16StorageType, I32ValType,
   I64ValType, I8StorageType, RefTypeValType, StructType, TypeIDX, V128ValType,
   ValTypeStorageType, Var,
 }
+import shine_tree
 
 /// Create an empty Struct type
 /// https://webassembly.github.io/gc/core/syntax/types.html#aggregate-types
 pub fn new() {
-  StructType(finger_tree.empty)
+  StructType(shine_tree.empty)
 }
 
 /// Add an immutable `i8` field to the struct
 pub fn i8_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(I8StorageType, Const)),
+    |> shine_tree.push(FieldType(I8StorageType, Const)),
   )
 }
 
@@ -24,7 +24,7 @@ pub fn i8_field(struct_type: StructType) {
 pub fn i8_mut_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(I8StorageType, Var)),
+    |> shine_tree.push(FieldType(I8StorageType, Var)),
   )
 }
 
@@ -32,7 +32,7 @@ pub fn i8_mut_field(struct_type: StructType) {
 pub fn i16_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(I16StorageType, Const)),
+    |> shine_tree.push(FieldType(I16StorageType, Const)),
   )
 }
 
@@ -40,7 +40,7 @@ pub fn i16_field(struct_type: StructType) {
 pub fn i16_mut_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(I16StorageType, Var)),
+    |> shine_tree.push(FieldType(I16StorageType, Var)),
   )
 }
 
@@ -48,7 +48,7 @@ pub fn i16_mut_field(struct_type: StructType) {
 pub fn i32_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(I32ValType), Const)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(I32ValType), Const)),
   )
 }
 
@@ -56,7 +56,7 @@ pub fn i32_field(struct_type: StructType) {
 pub fn i32_mut_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(I32ValType), Var)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(I32ValType), Var)),
   )
 }
 
@@ -64,7 +64,7 @@ pub fn i32_mut_field(struct_type: StructType) {
 pub fn i64_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(I64ValType), Const)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(I64ValType), Const)),
   )
 }
 
@@ -72,7 +72,7 @@ pub fn i64_field(struct_type: StructType) {
 pub fn i64_mut_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(I64ValType), Var)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(I64ValType), Var)),
   )
 }
 
@@ -80,7 +80,7 @@ pub fn i64_mut_field(struct_type: StructType) {
 pub fn f32_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(F32ValType), Const)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(F32ValType), Const)),
   )
 }
 
@@ -88,7 +88,7 @@ pub fn f32_field(struct_type: StructType) {
 pub fn f32_mut_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(F32ValType), Var)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(F32ValType), Var)),
   )
 }
 
@@ -96,7 +96,7 @@ pub fn f32_mut_field(struct_type: StructType) {
 pub fn f64_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(F64ValType), Const)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(F64ValType), Const)),
   )
 }
 
@@ -104,7 +104,7 @@ pub fn f64_field(struct_type: StructType) {
 pub fn f64_mut_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(F64ValType), Var)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(F64ValType), Var)),
   )
 }
 
@@ -112,7 +112,7 @@ pub fn f64_mut_field(struct_type: StructType) {
 pub fn v128_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(V128ValType), Const)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(V128ValType), Const)),
   )
 }
 
@@ -120,7 +120,7 @@ pub fn v128_field(struct_type: StructType) {
 pub fn v128_mut_field(struct_type: StructType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(ValTypeStorageType(V128ValType), Var)),
+    |> shine_tree.push(FieldType(ValTypeStorageType(V128ValType), Var)),
   )
 }
 
@@ -128,7 +128,7 @@ pub fn v128_mut_field(struct_type: StructType) {
 pub fn from_ref_type_field(struct_type: StructType, ref_type: RefType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(
+    |> shine_tree.push(FieldType(
       ValTypeStorageType(RefTypeValType(ref_type)),
       Const,
     )),
@@ -139,7 +139,7 @@ pub fn from_ref_type_field(struct_type: StructType, ref_type: RefType) {
 pub fn from_ref_type_mut_field(struct_type: StructType, ref_type: RefType) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(
+    |> shine_tree.push(FieldType(
       ValTypeStorageType(RefTypeValType(ref_type)),
       Var,
     )),
@@ -152,7 +152,7 @@ pub fn from_ref_type_mut_field(struct_type: StructType, ref_type: RefType) {
 pub fn from_type_index_field(struct_type: StructType, type_idx: TypeIDX) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(
+    |> shine_tree.push(FieldType(
       ValTypeStorageType(
         RefTypeValType(HeapTypeRefType(ConcreteHeapType(type_idx), False)),
       ),
@@ -167,7 +167,7 @@ pub fn from_type_index_field(struct_type: StructType, type_idx: TypeIDX) {
 pub fn from_type_index_mut_field(struct_type: StructType, type_idx: TypeIDX) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(
+    |> shine_tree.push(FieldType(
       ValTypeStorageType(
         RefTypeValType(HeapTypeRefType(ConcreteHeapType(type_idx), False)),
       ),
@@ -185,7 +185,7 @@ pub fn from_type_index_nullable_field(
 ) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(
+    |> shine_tree.push(FieldType(
       ValTypeStorageType(
         RefTypeValType(HeapTypeRefType(ConcreteHeapType(type_idx), True)),
       ),
@@ -203,7 +203,7 @@ pub fn from_type_index_nullable_mut_field(
 ) {
   StructType(
     struct_type.ft
-    |> finger_tree.push(FieldType(
+    |> shine_tree.push(FieldType(
       ValTypeStorageType(
         RefTypeValType(HeapTypeRefType(ConcreteHeapType(type_idx), True)),
       ),

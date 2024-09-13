@@ -1,11 +1,11 @@
 import builder/expression.{type ExpressionBuilder}
-import internal/finger_tree.{type FingerTree}
 import internal/structure/types.{
   type BlockType, type FuncIDX, type LabelIDX, type RefType, type TableIDX,
   type TypeIDX, type ValType, Br, BrIf, BrOnCast, BrOnCastFail, BrOnNonNull,
   BrOnNull, BrTable, Call, CallIndirect, CallRef, Drop, Nop, Return, ReturnCall,
   ReturnCallIndirect, ReturnCallRef, Select, SelectT, Unreachable,
 }
+import shine_tree.{type ShineTree}
 
 pub fn return(builder: ExpressionBuilder) {
   builder
@@ -36,7 +36,7 @@ pub fn select(builder: ExpressionBuilder) {
   |> expression.push(Select)
 }
 
-pub fn select_t(builder: ExpressionBuilder, val_type: FingerTree(ValType)) {
+pub fn select_t(builder: ExpressionBuilder, val_type: ShineTree(ValType)) {
   builder
   |> expression.push(SelectT(val_type))
 }
@@ -135,7 +135,7 @@ pub fn br_on_null(builder: ExpressionBuilder, label_idx: LabelIDX) {
 
 pub fn br_table(
   builder: ExpressionBuilder,
-  labels: FingerTree(LabelIDX),
+  labels: ShineTree(LabelIDX),
   default: LabelIDX,
 ) {
   builder

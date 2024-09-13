@@ -7,7 +7,6 @@ import internal/binary/values.{
   decode_i32, decode_i64, decode_s33, decode_u32, encode_i32, encode_i64,
   encode_s33, encode_u32,
 }
-import internal/finger_tree.{type FingerTree}
 import internal/structure/numbers.{
   decode_f32, decode_f64, encode_f32, encode_f64, s33, u32, unwrap_s33,
   unwrap_u32,
@@ -113,6 +112,7 @@ import internal/structure/types.{
   lane_16, lane_2, lane_4, lane_8,
 }
 import pprint
+import shine_tree.{type ShineTree}
 
 /// Decode a lane index (u32) from the given bit array, and assert it's
 /// less than 16.
@@ -379,7 +379,7 @@ pub fn encode_val_type(builder: BytesBuilder, val_type: ValType) {
 /// Encoding a result type is the same as encoding a vector of ValTypes
 pub fn encode_result_type(
   builder: BytesBuilder,
-  result_type: FingerTree(ValType),
+  result_type: ShineTree(ValType),
 ) {
   builder |> common.encode_vec(result_type, encode_val_type)
 }
@@ -560,7 +560,7 @@ pub fn decode_rec_type(bits: BitArray) {
     }
     _ -> {
       use #(st, rest) <- result.map(decode_sub_type(bits))
-      #(RecType(finger_tree.from_list([st])), rest)
+      #(RecType(shine_tree.from_list([st])), rest)
     }
   }
 }
@@ -570,9 +570,9 @@ pub fn decode_rec_type(bits: BitArray) {
 /// 1. [0x4E]  - This represents a vector of sub types that are iso-recursive
 /// 2. A single subtype wrapped inside of a rectype group
 pub fn encode_rec_type(builder: BytesBuilder, rec_type: RecType) {
-  case rec_type.sub_types |> finger_tree.size {
+  case rec_type.sub_types |> shine_tree.size {
     1 ->
-      case rec_type.sub_types |> finger_tree.shift {
+      case rec_type.sub_types |> shine_tree.shift {
         Ok(#(sub_type, _)) -> encode_sub_type(builder, sub_type)
         Error(_) -> Error("Invalid recursive type")
       }
@@ -605,7 +605,7 @@ pub fn decode_sub_type(bits: BitArray) {
     }
     _ -> {
       use #(ct, rest) <- result.map(decode_comp_type(bits))
-      #(SubType(True, finger_tree.new(), ct), rest)
+      #(SubType(True, shine_tree.empty, ct), rest)
     }
   }
 }
@@ -618,7 +618,7 @@ pub fn decode_sub_type(bits: BitArray) {
 ///    and a single composite type.
 /// 3. A single composite type that is *FINAL*
 pub fn encode_sub_type(builder: BytesBuilder, sub_type: SubType) {
-  case sub_type.final, sub_type.t |> finger_tree.size {
+  case sub_type.final, sub_type.t |> shine_tree.size {
     True, 0 -> builder |> encode_composite_type(sub_type.ct)
     True, _ -> {
       use builder <- result.try(
@@ -960,27 +960,27 @@ pub fn encode_expression(
 /// until the list is empty.
 pub fn do_encode_instructions(
   builder: BytesBuilder,
-  insts: FingerTree(Instruction),
+  insts: ShineTree(Instruction),
 ) -> Result(BytesBuilder, String) {
   insts
-  |> finger_tree.try_reducel(builder, encode_instruction)
+  |> shine_tree.try_foldl(builder, encode_instruction)
 }
 
 /// This function decodes an expression from a given BitArray, stopping when it
 /// encounters an "end" instruction.
 pub fn decode_expression(bits: BitArray) -> Result(#(Expr, BitArray), String) {
-  do_decode_expression(bits, finger_tree.empty)
+  do_decode_expression(bits, shine_tree.empty)
 }
 
 fn do_decode_expression(
   bits: BitArray,
-  acc: FingerTree(Instruction),
+  acc: ShineTree(Instruction),
 ) -> Result(#(Expr, BitArray), String) {
   case bits {
     <<0x0B, rest:bits>> -> Ok(#(Expr(acc), rest))
     _ -> {
       use #(inst, rest) <- result.try(decode_instruction(bits))
-      do_decode_expression(rest, acc |> finger_tree.push(inst))
+      do_decode_expression(rest, acc |> shine_tree.push(inst))
     }
   }
 }
@@ -994,16 +994,16 @@ fn do_decode_expression(
 fn do_decode_if_instruction(
   bits: BitArray,
   bt: BlockType,
-  acc: FingerTree(Instruction),
+  acc: ShineTree(Instruction),
 ) -> Result(#(Instruction, BitArray), String) {
   case bits {
     <<0x0B, rest:bits>> -> Ok(#(If(bt, acc, None), rest))
     <<0x05, rest:bits>> -> {
-      do_decode_else_instruction(rest, bt, acc, finger_tree.empty)
+      do_decode_else_instruction(rest, bt, acc, shine_tree.empty)
     }
     _ -> {
       use #(inst, rest) <- result.try(decode_instruction(bits))
-      do_decode_if_instruction(rest, bt, acc |> finger_tree.push(inst))
+      do_decode_if_instruction(rest, bt, acc |> shine_tree.push(inst))
     }
   }
 }
@@ -1014,8 +1014,8 @@ fn do_decode_if_instruction(
 fn do_decode_else_instruction(
   bits: BitArray,
   bt: BlockType,
-  if_acc: FingerTree(Instruction),
-  else_acc: FingerTree(Instruction),
+  if_acc: ShineTree(Instruction),
+  else_acc: ShineTree(Instruction),
 ) -> Result(#(Instruction, BitArray), String) {
   case bits {
     <<0x0B, rest:bits>> -> Ok(#(If(bt, if_acc, Some(else_acc)), rest))
@@ -1025,7 +1025,7 @@ fn do_decode_else_instruction(
         rest,
         bt,
         if_acc,
-        else_acc |> finger_tree.push(inst),
+        else_acc |> shine_tree.push(inst),
       )
     }
   }
@@ -2293,7 +2293,7 @@ pub fn decode_instruction(
     }
     <<0x04, rest:bits>> -> {
       use #(bt, rest) <- result.try(decode_block_type(rest))
-      do_decode_if_instruction(rest, bt, finger_tree.empty)
+      do_decode_if_instruction(rest, bt, shine_tree.empty)
     }
     <<0x0C, rest:bits>> -> {
       use #(label_idx, rest) <- result.map(decode_u32(rest))
