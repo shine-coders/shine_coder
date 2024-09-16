@@ -3,7 +3,7 @@ import builder/instructions/control
 import builder/instructions/i32
 import builder/module
 import builder/types/block_type
-import gleam/option.{None, Some}
+import gleam/option.{None}
 import internal/structure/types.{
   ArrayCopy, ArrayFill, ArrayGet, ArrayGetS, ArrayGetU, ArrayInitData,
   ArrayInitElem, ArrayNew, ArrayNewData, ArrayNewDefault, ArrayNewElem,
@@ -16,7 +16,6 @@ import internal/structure/types.{
   StructSet, TableCopy, TableFill, TableGet, TableGrow, TableInit, TableSet,
   TableSize,
 }
-import shine_tree
 import values
 import visitor
 import visitor/visit_test_variant
@@ -331,9 +330,8 @@ pub fn visit_array_init_elem_test() {
 }
 
 pub fn visit_select_t_test() {
-  let val_types =
-    [I32ValType, I64ValType, F32ValType, F64ValType]
-    |> module.to_vector
+  let val_types = [I32ValType, I64ValType, F32ValType, F64ValType]
+
   visit_test_variant.run(
     SelectT(val_types),
     visitor.on_enter_instruction,
@@ -341,13 +339,7 @@ pub fn visit_select_t_test() {
     visitor.on_enter_select_t,
     visitor.on_exit_select_t,
     visitor.visit_instruction,
-    Some(fn(actual, expected) {
-      case actual, expected {
-        SelectT(actual_val_types), SelectT(expected_val_types) ->
-          shine_tree.equals(actual_val_types, expected_val_types)
-        a, b -> a == b
-      }
-    }),
+    None,
   )
 }
 
@@ -589,10 +581,8 @@ pub fn visit_loop_test() {
 }
 
 pub fn visit_if_test() {
-  let if_block = shine_tree.from_list([Nop])
-
   visit_test_variant.run(
-    If(block_type.void, if_block, None),
+    If(block_type.void, [Nop], None),
     visitor.on_enter_instruction,
     visitor.on_exit_instruction,
     visitor.on_enter_if,
@@ -635,14 +625,7 @@ pub fn visit_br_table_test() {
   let assert Ok(label_idx4) = module.label_idx(45)
   let assert Ok(label_idx5) = module.label_idx(46)
   let assert Ok(default_label) = module.label_idx(47)
-  let labels =
-    shine_tree.from_list([
-      label_idx1,
-      label_idx2,
-      label_idx3,
-      label_idx4,
-      label_idx5,
-    ])
+  let labels = [label_idx1, label_idx2, label_idx3, label_idx4, label_idx5]
   visit_test_variant.run(
     BrTable(labels, default_label),
     visitor.on_enter_instruction,
@@ -650,17 +633,7 @@ pub fn visit_br_table_test() {
     visitor.on_enter_br_table,
     visitor.on_exit_br_table,
     visitor.visit_instruction,
-    Some(fn(actual, expected) {
-      case actual, expected {
-        BrTable(actual_labels, actual_default),
-          BrTable(expected_labels, expected_default)
-        -> {
-          shine_tree.equals(actual_labels, expected_labels)
-          && actual_default == expected_default
-        }
-        a, b -> a == b
-      }
-    }),
+    None,
   )
 }
 

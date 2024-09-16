@@ -1,3 +1,4 @@
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result.{map, try}
 import internal/structure/modules.{
@@ -41,7 +42,6 @@ import internal/structure/types.{
   V128ValType, ValTypeBlockType, ValTypeStorageType, VoidBlockType,
 }
 import pprint
-import shine_tree.{type ShineTree}
 
 pub type VisitorCallback(ctx, element) =
   fn(ctx, element) -> Result(#(ctx, element), String)
@@ -899,23 +899,19 @@ fn do_visit(ctx, element, visitor: Option(VisitorCallback(ctx, element))) {
 
 fn do_visit_element_list(
   ctx,
-  elements: ShineTree(element),
+  elements: List(element),
   visitor: BinaryModuleVisitor(ctx),
   do_visit_callback: fn(ctx, element, BinaryModuleVisitor(ctx)) ->
     Result(#(ctx, element), String),
 ) {
   use #(ctx, elements, _) <- map(
-    shine_tree.try_foldl(
-      elements,
-      #(ctx, shine_tree.empty, visitor),
-      fn(acc, element) {
-        let #(ctx, acc, visitor) = acc
-        use #(ctx, element) <- map(do_visit_callback(ctx, element, visitor))
-        #(ctx, acc |> shine_tree.push(element), visitor)
-      },
-    ),
+    list.try_fold(elements, #(ctx, [], visitor), fn(acc, element) {
+      let #(ctx, acc, visitor) = acc
+      use #(ctx, element) <- map(do_visit_callback(ctx, element, visitor))
+      #(ctx, [element, ..acc], visitor)
+    }),
   )
-  #(ctx, elements)
+  #(ctx, elements |> list.reverse)
 }
 
 pub fn do_visit_type_section(
@@ -1329,47 +1325,43 @@ pub fn do_visit_array_type(
 
 pub fn do_visit_custom_sections(
   ctx,
-  custom_sections: Option(ShineTree(CustomSection)),
+  custom_sections: Option(List(CustomSection)),
   visitor: BinaryModuleVisitor(ctx),
-) -> Result(#(ctx, Option(ShineTree(CustomSection))), String) {
+) -> Result(#(ctx, Option(List(CustomSection))), String) {
   case custom_sections {
     Some(custom_sections) ->
-      do_visit_custom_sections_filter(
-        ctx,
-        custom_sections,
-        shine_tree.empty,
-        visitor,
-      )
+      do_visit_custom_sections_filter(ctx, custom_sections, [], visitor)
     _ -> Ok(#(ctx, custom_sections))
   }
 }
 
 fn do_visit_custom_sections_filter(
   ctx,
-  custom_sections: ShineTree(CustomSection),
-  acc: ShineTree(CustomSection),
+  custom_sections: List(CustomSection),
+  acc: List(CustomSection),
   visitor: BinaryModuleVisitor(ctx),
-) -> Result(#(ctx, Option(ShineTree(CustomSection))), String) {
-  case shine_tree.shift(custom_sections) {
-    Ok(#(custom_section, custom_sections)) -> {
-      use #(ctx, custom_section) <- try(do_visit_custom_section(
+) -> Result(#(ctx, Option(List(CustomSection))), String) {
+  case custom_sections {
+    [] -> Ok(#(ctx, Some(acc)))
+    [custom_section, ..custom_sections] -> {
+      use #(ctx, optional_custom_section) <- try(do_visit_custom_section(
         ctx,
         custom_section,
         visitor,
       ))
-      case custom_section {
+
+      case optional_custom_section {
         Some(custom_section) ->
           do_visit_custom_sections_filter(
             ctx,
             custom_sections,
-            shine_tree.push(acc, custom_section),
+            [custom_section, ..acc],
             visitor,
           )
         None ->
           do_visit_custom_sections_filter(ctx, custom_sections, acc, visitor)
       }
     }
-    _ -> Ok(#(ctx, Some(acc)))
   }
 }
 

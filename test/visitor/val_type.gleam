@@ -1,8 +1,8 @@
+import gleam/option.{None}
 import internal/structure/types.{
   F32ValType, F64ValType, I31RefType, I32ValType, I64ValType, RefTypeValType,
   V128ValType,
 }
-import gleam/option.{None}
 import visitor
 import visitor/visit_test_variant
 

@@ -1,4 +1,5 @@
 import builder/module
+import gleam/option.{None}
 import internal/structure/types.{
   AnyHeapType, ArrayHeapType, ConcreteHeapType, EqHeapType, ExternHeapType,
   FuncHeapType, I31HeapType, NoExternHeapType, NoFuncHeapType, NoneHeapType,
@@ -6,7 +7,6 @@ import internal/structure/types.{
 }
 import visitor
 import visitor/visit_test_variant
-import gleam/option.{None}
 
 pub fn visit_func_heap_type_test() {
   visit_test_variant.run(

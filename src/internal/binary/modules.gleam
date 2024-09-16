@@ -1,4 +1,5 @@
 import gleam/bytes_builder.{type BytesBuilder}
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import internal/binary/common.{encode_section_from_builder}
@@ -28,7 +29,6 @@ import internal/structure/types.{
   GlobalExport, GlobalImport, HeapTypeRefType, Locals, MemExport, MemImport,
   PassiveData, PassiveElemMode, Table, TableExport, TableIDX, TableImport,
 } as structure_types
-import shine_tree.{type ShineTree}
 
 /// The magic header bytes of every web assembly module
 const wasm_magic = <<0x00, 0x61, 0x73, 0x6D, 0x01, 0x00, 0x00, 0x00>>
@@ -62,7 +62,7 @@ pub fn encode_module(module: BinaryModule) {
 
   // The next section is always the function section if it exists with id 0x03.
   // Despite the name, this section is used to define the types of each function
-  // in the code section which has the actual function bodies. 
+  // in the code section which has the actual function bodies.
   use builder <- result.try(
     builder |> common.encode_option(module.functions, encode_function_section),
   )
@@ -279,13 +279,13 @@ pub fn decode_data_section(bits: BitArray) {
 
 /// Locals are encoded with a count and a val_type, describing a vector
 /// of local variables. For example:
-/// 
+///
 /// With three "locals" definitions:
 /// [(1 i32) (4 i64) (2 f32)]
-/// 
+///
 /// This results in the following local variables defined in a given function body:
 /// [(i32) (i64) (i64) (i64) (i64) (f32) (f32)]
-/// 
+///
 /// This function decodes a single set of "locals" definitions.
 fn decode_locals(bits: BitArray) {
   use #(count, rest) <- result.try(values.decode_u32(bits))
@@ -294,7 +294,7 @@ fn decode_locals(bits: BitArray) {
 }
 
 /// Decode a single code segment from the given bit array.
-/// 
+///
 /// A code segment is defined by a single u32 value, which denotes the
 /// byte size of the locals and function body combined, followed by the
 /// locals definitions, and the function body itself.
@@ -469,7 +469,7 @@ pub fn decode_start_section(bits: BitArray) {
 fn decode_export(bits: BitArray) {
   use #(name, rest) <- result.try(common.decode_string(bits))
   case rest {
-    // type 0 is a function export 
+    // type 0 is a function export
     <<0, rest:bits>> -> {
       use #(func_idx, rest) <- result.map(decode_func_idx(rest))
       #(FuncExport(name, func_idx), rest)
@@ -625,7 +625,7 @@ pub fn decode_type_section(bits: BitArray) {
 
 /// Decode a set of consecutive custom sections.
 pub fn decode_custom_sections(bits: BitArray) {
-  do_decode_custom_sections(bits, shine_tree.empty)
+  do_decode_custom_sections(bits, [])
 }
 
 fn do_decode_custom_section(rest: BitArray) {
@@ -642,11 +642,11 @@ pub fn decode_custom_section(bits: BitArray) {
 
 /// This method is a helper function for emulating a while loop that continues
 /// until the next wasm binary section isn't a custom one
-fn do_decode_custom_sections(bits: BitArray, acc: ShineTree(CustomSection)) {
+fn do_decode_custom_sections(bits: BitArray, acc: List(CustomSection)) {
   case decode_custom_section(bits) {
     Ok(#(Some(section), rest)) ->
-      do_decode_custom_sections(rest, acc |> shine_tree.push(section))
-    _ -> Ok(#(Some(acc), bits))
+      do_decode_custom_sections(rest, [section, ..acc])
+    _ -> Ok(#(Some(acc |> list.reverse), bits))
   }
 }
 
@@ -655,18 +655,17 @@ fn do_decode_custom_sections(bits: BitArray, acc: ShineTree(CustomSection)) {
 /// exhausted.
 pub fn encode_custom_sections(
   builder: BytesBuilder,
-  sections: Option(ShineTree(CustomSection)),
+  sections: Option(List(CustomSection)),
 ) {
   case sections {
-    Some(sections) ->
-      shine_tree.try_foldl(sections, builder, encode_custom_section)
+    Some(sections) -> list.try_fold(sections, builder, encode_custom_section)
     None -> Ok(builder)
   }
 }
 
 /// Encode a single custom section. This method writes the following byte patterns
 /// to the builder:
-/// 
+///
 /// 1. A single 0x00 byte denoting a custom section
 /// 2. The byte length of the entire section: [byte_length: u32]
 /// 3. The name of the custom section: [byte_length: u32] [string_bytes: utf8]
@@ -686,7 +685,7 @@ pub fn encode_custom_section(builder: BytesBuilder, section: CustomSection) {
 }
 
 /// Encode a type section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A single 0x01 byte denoting a type section
 /// 2. A vector of RecTypes which can be either a single type, or a group of
 ///    mutually recursive subtypes.
@@ -701,7 +700,7 @@ pub fn encode_type_section(builder: BytesBuilder, section: TypeSection) {
 }
 
 /// Encode a single import. This method writes the following byte patterns:
-/// 
+///
 /// 1. A single 0x00 byte followed by a function import or
 /// 2. A single 0x01 byte followed by a table import or
 /// 3. A single 0x02 byte followed by a memory import or
@@ -752,7 +751,7 @@ pub fn encode_import(builder: BytesBuilder, import_: Import) {
 /// [0x03] [module_name_length: u32] [module_name: string] ..
 /// [global_name_length: u32] [global_name: string] [global_type: GlobalType]
 /// Encode an import section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A single 0x02 byte denoting an import section
 /// 2. The byte length of the following section payload
 /// 3. A vector of imports: [import_length: u32] [imports: Import*]
@@ -765,7 +764,7 @@ pub fn encode_import_section(builder: BytesBuilder, section: ImportSection) {
 }
 
 /// Encode a function section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A single 0x03 byte denoting a function section
 /// 2. The byte length of the following section payload
 /// 3. A vector of type indices: [function_length: u32] [type_indices: TypeIDX*]
@@ -784,7 +783,7 @@ pub fn encode_function_section(
 }
 
 /// Encode a single table. This method writes the following byte patterns:
-/// 
+///
 /// 1. A single table type: [table_type: TableType] or...
 /// 2. Two bytes denoting a table with an initializer expression: [0x40, 0x00] [expr: Expression]
 pub fn encode_table(builder: BytesBuilder, table: Table) {
@@ -802,7 +801,7 @@ pub fn encode_table(builder: BytesBuilder, table: Table) {
 }
 
 /// Encode a table section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A single 0x04 byte denoting a table section
 /// 2. The byte length of the following section payload
 /// 3. A vector of tables: [table_length: u32] [tables: Table*]
@@ -817,7 +816,7 @@ pub fn encode_table_section(builder: BytesBuilder, table_section: TableSection) 
 
 /// Encode a memory section. This is usually a vector of memory types with
 /// a single element. It encodes the following byte patterns:
-/// 
+///
 /// 1. A single 0x05 byte denoting a memory section
 /// 2. The byte length of the following section payload
 /// 3. A vector of memory types: [memory_length: u32] [memory_types: MemType*]
@@ -835,9 +834,9 @@ pub fn encode_memory_section(
 }
 
 /// Encode a single global. This method writes the following byte patterns:
-/// 
+///
 /// [global_type: GlobalType] [init: Expression]
-/// 
+///
 /// Note: The expression result type must match the global type specified.
 pub fn encode_global(builder: BytesBuilder, global: Global) {
   use builder <- result.try(builder |> encode_global_type(global.type_))
@@ -845,7 +844,7 @@ pub fn encode_global(builder: BytesBuilder, global: Global) {
 }
 
 /// Encode a global section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A single 0x06 byte denoting a global section
 /// 2. The byte length of the following section payload
 /// 3. A vector of globals: [global_length: u32] [globals: Global*]
@@ -863,9 +862,9 @@ pub fn encode_global_section(
 
 /// Encode a single export. Exports define the module contents that can be used externally
 /// by the web assembly host.
-/// 
+///
 /// Exports can be encoded in the following ways:
-/// 
+///
 /// 1. [name_length: u32] [name: utf8] [0x00] [func_idx: FuncIDX] indicating a function export
 /// 2. [name_length: u32] [name: utf8] [0x01] [table_idx: TableIDX] indicating a table export.
 /// 3. [name_length: u32] [name: utf8] [0x02] [mem_idx: MemIDX] indicating a memory export.
@@ -873,7 +872,7 @@ pub fn encode_global_section(
 pub fn encode_export(builder: BytesBuilder, export_: Export) {
   use builder <- result.try(builder |> common.encode_string(export_.name))
   case export_ {
-    // 
+    //
     FuncExport(_, func_idx) ->
       builder
       |> bytes_builder.append(<<0x00>>)
@@ -894,7 +893,7 @@ pub fn encode_export(builder: BytesBuilder, export_: Export) {
 }
 
 /// Encode an export section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A single 0x07 byte denoting an export section
 /// 2. The byte length of the following section payload
 /// 3. A vector of exports: [exports_length: u32] [exports: Export*]
@@ -911,7 +910,7 @@ pub fn encode_export_section(
 }
 
 /// Encode a start section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A single 0x08 byte denoting a start section
 /// 2. The byte length of the following section payload which is a single u32
 /// 3. The start function index as a u32
@@ -925,7 +924,7 @@ pub fn encode_start_section(builder: BytesBuilder, start_section: StartSection) 
 
 /// Encode a single element segment. This method writes a byte pattern based
 /// on the type of elements and how they are treated to the web assembly module.
-/// 
+///
 /// For more information on how they are encoded, see the specification here:
 /// https://webassembly.github.io/gc/core/binary/modules.html#element-section
 pub fn encode_element_segment(builder: BytesBuilder, element: Elem) {
@@ -1050,11 +1049,11 @@ pub fn encode_element_segment(builder: BytesBuilder, element: Elem) {
 }
 
 /// Encodes an element section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A 0x09 byte, indicating the start of an element section
 /// 2. The byte length of the section as a u32
 /// 3. A vector of encoded element segments
-/// 
+///
 /// For more information, please see:
 /// https://webassembly.github.io/gc/core/binary/modules.html#element-section
 pub fn encode_element_section(
@@ -1071,7 +1070,7 @@ pub fn encode_element_section(
 
 /// Encode a code segment, also known as a function body. This method writes the following
 /// byte patterns:
-/// 
+///
 /// 1. The byte length of the segment as a u32
 /// 2. A vector of encoded locals
 /// 3. An expression containing the function body, terminated by a single 0x0B (end) byte.
@@ -1088,7 +1087,7 @@ pub fn encode_code_segment(builder: BytesBuilder, code: Code) {
 }
 
 /// Encodes a code section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A 0x0A (10) byte, indicating the start of a code section
 /// 2. The byte length of the section as a u32
 /// 3. A vector of encoded code segments
@@ -1158,11 +1157,11 @@ fn encode_data_segment(builder: BytesBuilder, data: Data) {
 }
 
 /// Encode a data section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A 0x0B (11) byte, indicating the start of a data section
 /// 2. The byte length of the section as a u32
 /// 3. A vector of encoded data segments: [data_section_count: u32] [data_segments: Data*]
-/// 
+///
 pub fn encode_data_section(builder: BytesBuilder, data_section: DataSection) {
   use section_builder <- result.try(
     bytes_builder.new()
@@ -1174,7 +1173,7 @@ pub fn encode_data_section(builder: BytesBuilder, data_section: DataSection) {
 }
 
 /// Encodes a data count section. This method writes the following byte patterns:
-/// 
+///
 /// 1. A 0x0C (12) byte, indicating the start of a data count section
 /// 2. The byte length of the section as a u32
 /// 3. The number of data segments in the module as a u32

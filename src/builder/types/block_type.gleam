@@ -1,6 +1,5 @@
 import internal/structure/types.{
-  type BlockType, type TypeIDX, type ValType, FuncTypeBlockType,
-  ValTypeBlockType, VoidBlockType,
+  type TypeIDX, type ValType, FuncTypeBlockType, ValTypeBlockType, VoidBlockType,
 }
 
 pub const void = VoidBlockType

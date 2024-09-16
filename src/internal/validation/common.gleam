@@ -3,38 +3,37 @@ import internal/structure/types.{
   type Data, type DefType, type Elem, type FuncIDX, type GlobalType, type Locals,
   type MemType, type RecType, type TableType, type ValType,
 }
-import shine_tree.{type ShineTree}
 
 pub type Context {
   Context(
-    types: ShineTree(DefType),
-    funcs: ShineTree(DefType),
-    tables: ShineTree(TableType),
-    mems: ShineTree(MemType),
-    globals: ShineTree(GlobalType),
-    elems: ShineTree(Elem),
-    data: ShineTree(Data),
-    locals: ShineTree(Locals),
-    labels: ShineTree(ShineTree(ValType)),
-    return: Option(ShineTree(ValType)),
-    refs: ShineTree(FuncIDX),
+    types: List(DefType),
+    funcs: List(DefType),
+    tables: List(TableType),
+    mems: List(MemType),
+    globals: List(GlobalType),
+    elems: List(Elem),
+    data: List(Data),
+    locals: List(Locals),
+    labels: List(List(ValType)),
+    return: Option(List(ValType)),
+    refs: List(FuncIDX),
   )
 }
 
 pub const empty_context = Context(
-  types: shine_tree.empty,
-  funcs: shine_tree.empty,
-  tables: shine_tree.empty,
-  mems: shine_tree.empty,
-  globals: shine_tree.empty,
-  elems: shine_tree.empty,
-  data: shine_tree.empty,
-  locals: shine_tree.empty,
-  labels: shine_tree.empty,
+  types: [],
+  funcs: [],
+  tables: [],
+  mems: [],
+  globals: [],
+  elems: [],
+  data: [],
+  locals: [],
+  labels: [],
   return: None,
-  refs: shine_tree.empty,
+  refs: [],
 )
 
-pub fn roll_rec_types(rec_type: RecType) -> ShineTree(DefType) {
+pub fn roll_rec_types(rec_type: RecType) -> List(DefType) {
   todo
 }

@@ -1,7 +1,6 @@
 import internal/structure/types.{
-  F32ValType, F64ValType, I16StorageType, I32ValType, I64ValType, I8StorageType,
-  RefTypeValType, V128ValType, ValTypeStorageType,
-  type RefType,
+  type RefType, F32ValType, F64ValType, I16StorageType, I32ValType, I64ValType,
+  I8StorageType, RefTypeValType, V128ValType, ValTypeStorageType,
 }
 
 pub const i8 = I8StorageType

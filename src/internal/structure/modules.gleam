@@ -4,38 +4,37 @@ import internal/structure/types.{
   type Code, type Data, type Elem, type Export, type FuncIDX, type Global,
   type Import, type MemType, type RecType, type Table, type TypeIDX,
 }
-import shine_tree.{type ShineTree}
 
 /// This type represents a BinaryModule, which is a structural representation of a WebAssembly module,
 /// rather than a conceptual one. This type is used internally to be an encoding/decoding interface
 /// for web assembly targets.
 pub type BinaryModule {
   BinaryModule(
-    custom_0: Option(ShineTree(CustomSection)),
+    custom_0: Option(List(CustomSection)),
     types: Option(TypeSection),
-    custom_1: Option(ShineTree(CustomSection)),
+    custom_1: Option(List(CustomSection)),
     imports: Option(ImportSection),
-    custom_2: Option(ShineTree(CustomSection)),
+    custom_2: Option(List(CustomSection)),
     functions: Option(FunctionSection),
-    custom_3: Option(ShineTree(CustomSection)),
+    custom_3: Option(List(CustomSection)),
     tables: Option(TableSection),
-    custom_4: Option(ShineTree(CustomSection)),
+    custom_4: Option(List(CustomSection)),
     memories: Option(MemorySection),
-    custom_5: Option(ShineTree(CustomSection)),
+    custom_5: Option(List(CustomSection)),
     globals: Option(GlobalSection),
-    custom_6: Option(ShineTree(CustomSection)),
+    custom_6: Option(List(CustomSection)),
     exports: Option(ExportSection),
-    custom_7: Option(ShineTree(CustomSection)),
+    custom_7: Option(List(CustomSection)),
     start: Option(StartSection),
-    custom_8: Option(ShineTree(CustomSection)),
+    custom_8: Option(List(CustomSection)),
     elements: Option(ElementSection),
-    custom_9: Option(ShineTree(CustomSection)),
+    custom_9: Option(List(CustomSection)),
     code: Option(CodeSection),
-    custom_10: Option(ShineTree(CustomSection)),
+    custom_10: Option(List(CustomSection)),
     data: Option(DataSection),
-    custom_11: Option(ShineTree(CustomSection)),
+    custom_11: Option(List(CustomSection)),
     data_count: Option(DataCountSection),
-    custom_12: Option(ShineTree(CustomSection)),
+    custom_12: Option(List(CustomSection)),
   )
 }
 
@@ -83,14 +82,14 @@ pub type CustomSection {
 /// recursive type group. This allows for a compact storage of this type information, and when
 /// "unrolled", these types become the type index for validation and execution.
 pub type TypeSection {
-  TypeSection(types: ShineTree(RecType))
+  TypeSection(types: List(RecType))
 }
 
 /// WebAssembly modules can import functions, tables, memories, and globals. This section
 /// contains a list of those imports to describe what the module expects to use from
 /// the host.
 pub type ImportSection {
-  ImportSection(imports: ShineTree(Import))
+  ImportSection(imports: List(Import))
 }
 
 /// The WebAssembly function section is not a list of function declarations. Rather, it
@@ -98,7 +97,7 @@ pub type ImportSection {
 /// In order for a WebAssembly module to be valid, each type index must refer to a type
 /// that expands to a function composite type.
 pub type FunctionSection {
-  FunctionSection(funcs: ShineTree(TypeIDX))
+  FunctionSection(funcs: List(TypeIDX))
 }
 
 /// WebAssembly modules can declare tables which are pre-allocated arrays of values that
@@ -106,27 +105,27 @@ pub type FunctionSection {
 /// (which is a classification of object) that can be nullable and a limit that describes
 /// how many can exist within.
 pub type TableSection {
-  TableSection(tables: ShineTree(Table))
+  TableSection(tables: List(Table))
 }
 
 /// WebAssembly modules can declare linear memories which represent conceptual linear memory
 /// segments that can be used by the module for memory allocation and other operations.
 pub type MemorySection {
-  MemorySection(mts: ShineTree(MemType))
+  MemorySection(mts: List(MemType))
 }
 
 /// WebAssembly modules can declare global values which can be mutable and accessible from
 /// both the host and the WebAssembly module. Each global is defined by the ValueType it
 /// can hold, it's mutabliity, and an initial value.
 pub type GlobalSection {
-  GlobalSection(globals: ShineTree(Global))
+  GlobalSection(globals: List(Global))
 }
 
 /// WebAssembly modules can export functions, tables, memories, and globals. This section
 /// simply describes the set of exports in the module defined by a name, an export type, and
 /// a corresponding index to the other section containing that export.
 pub type ExportSection {
-  ExportSection(exports: ShineTree(Export))
+  ExportSection(exports: List(Export))
 }
 
 /// The WebAssembly start section specifies the index of the function to be called when the
@@ -138,11 +137,11 @@ pub type StartSection {
 /// In web assembly, tables can be initialized with element segments. Each one of these segments
 /// contains a list of RefType values that can either be initialized when the module is instantiated (active),
 /// preallocated for later use (passive), or declared up front for wasm engine optimization (declarative).
-/// 
+///
 /// Typically, modules only have active or passive element segments, and are most commonly used for
 /// function refrences for indirect function calls.
 pub type ElementSection {
-  ElementSection(elems: ShineTree(Elem))
+  ElementSection(elems: List(Elem))
 }
 
 /// WebAssembly modules can declare callable functions called "Code"s which define the shape
@@ -151,14 +150,14 @@ pub type ElementSection {
 /// of operations that represent the body of the function. Every body is terminated by an
 /// 0x0B "end" byte instruction to signify the end of the expression.
 pub type CodeSection {
-  CodeSection(codes: ShineTree(Code))
+  CodeSection(codes: List(Code))
 }
 
 /// WebAssembly modules can declare linear data segments which are pre-allocated byte arrays
 /// of data that can either be instantiated and written into the Module's linear memory, or
 /// declared as static segment for later use.
 pub type DataSection {
-  DataSection(data: ShineTree(Data))
+  DataSection(data: List(Data))
 }
 
 /// The WebAssembly data count section simply contains the number of data segments in the

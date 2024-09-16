@@ -1,6 +1,5 @@
 import gleam/option.{type Option, None, Some}
 import gleeunit/should
-import shine_tree
 import visitor.{type BinaryModuleVisitor}
 
 type VisitCallback(u) =

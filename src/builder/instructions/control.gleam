@@ -5,7 +5,6 @@ import internal/structure/types.{
   BrOnNull, BrTable, Call, CallIndirect, CallRef, Drop, Nop, Return, ReturnCall,
   ReturnCallIndirect, ReturnCallRef, Select, SelectT, Unreachable,
 }
-import shine_tree.{type ShineTree}
 
 pub fn return(builder: ExpressionBuilder) {
   builder
@@ -36,7 +35,7 @@ pub fn select(builder: ExpressionBuilder) {
   |> expression.push(Select)
 }
 
-pub fn select_t(builder: ExpressionBuilder, val_type: ShineTree(ValType)) {
+pub fn select_t(builder: ExpressionBuilder, val_type: List(ValType)) {
   builder
   |> expression.push(SelectT(val_type))
 }
@@ -135,7 +134,7 @@ pub fn br_on_null(builder: ExpressionBuilder, label_idx: LabelIDX) {
 
 pub fn br_table(
   builder: ExpressionBuilder,
-  labels: ShineTree(LabelIDX),
+  labels: List(LabelIDX),
   default: LabelIDX,
 ) {
   builder
