@@ -41,7 +41,6 @@ import internal/structure/types.{
   TableGrow, TableImport, TableInit, TableSet, TableSize, TableType, TypeIDX,
   V128ValType, ValTypeBlockType, ValTypeStorageType, VoidBlockType,
 }
-import pprint
 
 pub type VisitorCallback(ctx, element) =
   fn(ctx, element) -> Result(#(ctx, element), String)

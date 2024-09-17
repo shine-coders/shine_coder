@@ -18,6 +18,7 @@ ieee_float = ">= 1.0.0 and < 2.0.0"
 pprint = ">= 1.0.3 and < 2.0.0"
 simplifile = ">= 2.1.0 and < 3.0.0"
 shine_tree = ">= 0.0.3 and < 1.0.0"
+gleamy_structures = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
