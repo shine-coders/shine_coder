@@ -94,3 +94,7 @@ pub fn def_type_is_valid(ctx: Context, def_type: DefType) {
 pub fn ref_type_is_valid(ctx: Context, ref_type: RefType) {
   todo
 }
+
+pub fn rec_type_is_valid(ctx: Context, rec_type: RecType) {
+  todo
+}

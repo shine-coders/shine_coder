@@ -6,12 +6,12 @@ import internal/structure/types.{type RecType}
 import internal/validation/common.{
   type Context, Context, empty_context, roll_rec_types,
 }
-import internal/validation/types.{validate_rec_type} as _validation_types
+import internal/validation/types.{rec_type_is_valid} as _validation_types
 
 pub fn validate_type(ctx_prime: Context, rec_type: RecType) {
   let def_types = rec_type |> roll_rec_types
   let ctx = Context(..ctx_prime, types: list.append(ctx_prime.types, def_types))
-  use _ <- result.map(validate_rec_type(ctx, rec_type))
+  use _ <- result.map(rec_type_is_valid(ctx, rec_type))
   ctx
 }
 
