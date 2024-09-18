@@ -285,7 +285,13 @@ pub fn if_test() {
   )) =
     types.decode_instruction(<<0x04, 0x40, 0x20, 0, 0x20, 1, 0x6A, 0x1A, 0x0B>>)
 
+<<<<<<< HEAD
   result_body |> should.equal(instruction_list)
+=======
+  result_body
+  |> finger_tree.to_list
+  |> should.equal(instruction_list)
+>>>>>>> 5b7120c (Final push 0.0.1 (#3))
 
   let assert Ok(builder) =
     types.encode_instruction(

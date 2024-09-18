@@ -17,10 +17,17 @@ import internal/structure/types.{
   type RecType, type RefType, type Table, type TableIDX, type TableType,
   type TypeIDX, type ValType, ActiveData, ActiveElemMode, ArrayCompositeType,
   ArrayType, Code, Const, DataIDX, DeclarativeElemMode, ElemExpressions,
+<<<<<<< HEAD
   ElemFuncs, ElemIDX, FieldIDX, FieldType, FuncCompositeType, FuncExport,
   FuncHeapType, FuncIDX, FuncImport, FuncType, Global, GlobalExport, GlobalIDX,
   GlobalImport, GlobalType, HeapTypeRefType, LabelIDX, Limits, LocalIDX, Locals,
   MemExport, MemIDX, MemImport, MemType, PassiveData, PassiveElemMode, RecType,
+=======
+  ElemFuncs, ElemIDX, FieldType, FuncCompositeType, FuncExport, FuncHeapType,
+  FuncIDX, FuncImport, FuncType, Global, GlobalExport, GlobalIDX, GlobalImport,
+  GlobalType, HeapTypeRefType, LabelIDX, Limits, LocalIDX, Locals, MemExport,
+  MemIDX, MemImport, MemType, PassiveData, PassiveElemMode, RecType,
+>>>>>>> 5b7120c (Final push 0.0.1 (#3))
   StructCompositeType, StructType, SubType, Table, TableExport, TableIDX,
   TableImport, TableType, TypeIDX, Var,
 }
@@ -475,30 +482,74 @@ pub fn add_func_type(
   results: List(ValType),
 ) {
   let func_type =
+<<<<<<< HEAD
     SubType(False, [], FuncCompositeType(FuncType(parameters, results)))
 
   add_type(module, RecType([func_type]))
+=======
+    SubType(
+      False,
+      finger_tree.empty,
+      FuncCompositeType(FuncType(
+        finger_tree.from_list(parameters),
+        finger_tree.from_list(results),
+      )),
+    )
+
+  add_type(module, RecType(finger_tree.single(func_type)))
+>>>>>>> 5b7120c (Final push 0.0.1 (#3))
 }
 
 /// Add a new concrete ArrayType to the TypeSection
 pub fn add_array_type(module: BinaryModule, element_type: FieldType) {
   let array_type =
+<<<<<<< HEAD
     SubType(False, [], ArrayCompositeType(ArrayType(element_type)))
   add_type(module, RecType([array_type]))
+=======
+    SubType(
+      False,
+      finger_tree.empty,
+      ArrayCompositeType(ArrayType(element_type)),
+    )
+  add_type(module, RecType(finger_tree.single(array_type)))
+>>>>>>> 5b7120c (Final push 0.0.1 (#3))
 }
 
 // Add a new StructType to the TypeSection
 pub fn add_struct_type(module: BinaryModule, fields: List(FieldType)) {
+<<<<<<< HEAD
   let struct_type = SubType(False, [], StructCompositeType(StructType(fields)))
 
   add_type(module, RecType([struct_type]))
+=======
+  let struct_type =
+    SubType(
+      False,
+      finger_tree.empty,
+      StructCompositeType(StructType(finger_tree.from_list(fields))),
+    )
+
+  add_type(module, RecType(finger_tree.single(struct_type)))
+>>>>>>> 5b7120c (Final push 0.0.1 (#3))
 }
 
 // Add a new StructType to the TypeSection that is marked as "final"
 pub fn add_final_struct_type(module: BinaryModule, fields: List(FieldType)) {
+<<<<<<< HEAD
   let struct_type = SubType(True, [], StructCompositeType(StructType(fields)))
 
   add_type(module, RecType([struct_type]))
+=======
+  let struct_type =
+    SubType(
+      True,
+      finger_tree.empty,
+      StructCompositeType(StructType(finger_tree.from_list(fields))),
+    )
+
+  add_type(module, RecType(finger_tree.single(struct_type)))
+>>>>>>> 5b7120c (Final push 0.0.1 (#3))
 }
 
 /// Import a function from the host. The module_name and name are used to identify the
@@ -775,7 +826,11 @@ pub fn export_table(module: BinaryModule, name: String, table: TableIDX) {
 
 /// Export a memory to the module. The memory is given by it's index into the memory section,
 /// and it's name.
+<<<<<<< HEAD
 ///
+=======
+/// 
+>>>>>>> 5b7120c (Final push 0.0.1 (#3))
 /// Note: Currently, only one memory is allowed per module, as described in the WebAssembly spec.
 /// https://webassembly.github.io/gc/core/syntax/modules.html#memories
 pub fn export_memory(module: BinaryModule, name: String, memory: MemIDX) {
@@ -1220,6 +1275,7 @@ pub fn func_idx(idx: Int) {
   }
 }
 
+<<<<<<< HEAD
 /// Create a field index, as long as the index is a valid U32 value. The index must
 /// must be less than the number of fields in the struct.
 pub fn field_idx(idx: Int) {
@@ -1229,6 +1285,8 @@ pub fn field_idx(idx: Int) {
   }
 }
 
+=======
+>>>>>>> 5b7120c (Final push 0.0.1 (#3))
 /// Encode the module into a BitArray, as long as the module is syntatically correctly.
 /// Modules encoded with this function will not be validated. Please use the `validate`
 /// function to validate the module before encoding to ensure that the module is usable.
