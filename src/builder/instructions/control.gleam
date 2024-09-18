@@ -1,5 +1,4 @@
 import builder/expression.{type ExpressionBuilder}
-import internal/finger_tree.{type FingerTree}
 import internal/structure/types.{
   type BlockType, type FuncIDX, type LabelIDX, type RefType, type TableIDX,
   type TypeIDX, type ValType, Br, BrIf, BrOnCast, BrOnCastFail, BrOnNonNull,
@@ -36,7 +35,7 @@ pub fn select(builder: ExpressionBuilder) {
   |> expression.push(Select)
 }
 
-pub fn select_t(builder: ExpressionBuilder, val_type: FingerTree(ValType)) {
+pub fn select_t(builder: ExpressionBuilder, val_type: List(ValType)) {
   builder
   |> expression.push(SelectT(val_type))
 }
@@ -135,7 +134,7 @@ pub fn br_on_null(builder: ExpressionBuilder, label_idx: LabelIDX) {
 
 pub fn br_table(
   builder: ExpressionBuilder,
-  labels: FingerTree(LabelIDX),
+  labels: List(LabelIDX),
   default: LabelIDX,
 ) {
   builder

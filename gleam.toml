@@ -6,6 +6,7 @@ version = "0.0.1"
 #
 description = "A Web Assembly Encoder and Decoder written in Gleam"
 licences = ["MIT"]
+gleam = ">= 0.32.0"
 # repository = { type = "github", user = "", repo = "" }
 # links = [{ title = "Website", href = "" }]
 #
@@ -17,6 +18,8 @@ gleam_stdlib = ">= 0.34.0 and < 2.0.0"
 ieee_float = ">= 1.0.0 and < 2.0.0"
 pprint = ">= 1.0.3 and < 2.0.0"
 simplifile = ">= 2.1.0 and < 3.0.0"
+shine_tree = ">= 0.0.3 and < 1.0.0"
+gleamy_structures = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

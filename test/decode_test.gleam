@@ -4,6 +4,7 @@ import builder/instructions/ref
 import gleam/bit_array
 import gleam/bytes_builder
 import gleam/io
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/pair
 import gleeunit/should
@@ -11,7 +12,6 @@ import internal/binary/common
 import internal/binary/modules
 import internal/binary/types
 import internal/binary/values
-import internal/finger_tree
 import internal/structure/modules as structure_modules
 import internal/structure/numbers
 import internal/structure/types.{
@@ -19,7 +19,7 @@ import internal/structure/types.{
 } as structure_types
 
 pub fn func_idx_to_expr(expr: FuncIDX) {
-  Expr([RefFunc(expr)] |> finger_tree.from_list)
+  Expr([RefFunc(expr)])
 }
 
 fn should_equal_helper(val: Result(u, String), expected: u) {
@@ -176,13 +176,11 @@ pub fn decode_result_type_test() {
   <<0>>
   |> types.decode_result_type
   |> should.be_ok
-  |> pair.map_first(finger_tree.to_list)
   |> should.equal(#([], <<>>))
 
   <<4, 0x7F, 0x7E, 0x7D, 0x7C>>
   |> types.decode_result_type
   |> should.be_ok
-  |> pair.map_first(finger_tree.to_list)
   |> should.equal(
     #(
       [
@@ -269,12 +267,12 @@ pub fn decode_struct_type_test() {
   <<0>>
   |> types.decode_struct_type
   |> should.be_ok
-  |> should.equal(#(structure_types.StructType(finger_tree.empty), <<>>))
+  |> should.equal(#(structure_types.StructType([]), <<>>))
 
   <<6, 0x7F, 0x00, 0x78, 0x00, 0x77, 0x00, 0x7F, 0x01, 0x78, 0x01, 0x77, 0x01>>
   |> types.decode_struct_type
   |> should.be_ok
-  |> pair.map_first(fn(e) { e.ft |> finger_tree.to_list })
+  |> pair.map_first(fn(e) { e.ft })
   |> should.equal(
     #(
       [
@@ -309,25 +307,18 @@ pub fn decode_struct_type_test() {
 }
 
 fn func_type_equals(a: structure_types.FuncType, b: structure_types.FuncType) {
-  a.parameters
-  |> finger_tree.to_list
-  |> should.equal(b.parameters |> finger_tree.to_list)
-  a.results
-  |> finger_tree.to_list
-  |> should.equal(b.results |> finger_tree.to_list)
+  a |> should.equal(b)
 }
 
 fn struct_type_equals(
   a: structure_types.StructType,
   b: structure_types.StructType,
 ) {
-  a.ft
-  |> finger_tree.to_list
-  |> should.equal(b.ft |> finger_tree.to_list)
+  a |> should.equal(b)
 }
 
 fn array_type_equals(a: structure_types.ArrayType, b: structure_types.ArrayType) {
-  a.ft |> should.equal(b.ft)
+  a |> should.equal(b)
 }
 
 fn composite_type_equals(
@@ -362,10 +353,7 @@ fn decode_type_equals_helper(
 pub fn decode_composite_type_test() {
   decode_type_equals_helper(
     <<0x60, 0x00, 0x00>>,
-    structure_types.FuncCompositeType(structure_types.FuncType(
-      finger_tree.new(),
-      finger_tree.new(),
-    )),
+    structure_types.FuncCompositeType(structure_types.FuncType([], [])),
     types.decode_comp_type,
     composite_type_equals,
   )
@@ -376,34 +364,32 @@ pub fn decode_composite_type_test() {
       0x77, 0x01,
     >>,
     structure_types.StructCompositeType(
-      structure_types.StructType(
-        finger_tree.from_list([
-          structure_types.FieldType(
-            structure_types.ValTypeStorageType(structure_types.I32ValType),
-            structure_types.Const,
-          ),
-          structure_types.FieldType(
-            structure_types.I8StorageType,
-            structure_types.Const,
-          ),
-          structure_types.FieldType(
-            structure_types.I16StorageType,
-            structure_types.Const,
-          ),
-          structure_types.FieldType(
-            structure_types.ValTypeStorageType(structure_types.I32ValType),
-            structure_types.Var,
-          ),
-          structure_types.FieldType(
-            structure_types.I8StorageType,
-            structure_types.Var,
-          ),
-          structure_types.FieldType(
-            structure_types.I16StorageType,
-            structure_types.Var,
-          ),
-        ]),
-      ),
+      structure_types.StructType([
+        structure_types.FieldType(
+          structure_types.ValTypeStorageType(structure_types.I32ValType),
+          structure_types.Const,
+        ),
+        structure_types.FieldType(
+          structure_types.I8StorageType,
+          structure_types.Const,
+        ),
+        structure_types.FieldType(
+          structure_types.I16StorageType,
+          structure_types.Const,
+        ),
+        structure_types.FieldType(
+          structure_types.ValTypeStorageType(structure_types.I32ValType),
+          structure_types.Var,
+        ),
+        structure_types.FieldType(
+          structure_types.I8StorageType,
+          structure_types.Var,
+        ),
+        structure_types.FieldType(
+          structure_types.I16StorageType,
+          structure_types.Var,
+        ),
+      ]),
     ),
     types.decode_comp_type,
     composite_type_equals,
@@ -434,45 +420,31 @@ pub fn decode_composite_type_test() {
 }
 
 fn do_type_idxs_equal(
-  a: finger_tree.FingerTree(structure_types.TypeIDX),
-  b: finger_tree.FingerTree(structure_types.TypeIDX),
+  a: List(structure_types.TypeIDX),
+  b: List(structure_types.TypeIDX),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b))
-      if rest_a == finger_tree.empty && rest_b == finger_tree.empty
-    -> {
-      a |> should.equal(b)
-      Nil
-    }
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [], [] -> Nil
+    [a], [b] -> a |> should.equal(b)
+    [a, ..rest_a], [b, ..rest_b] -> {
       a |> should.equal(b)
       do_type_idxs_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
-    _, _ -> panic as "TypeIdxs were not equal"
+    _, _ -> panic as "Type indexes don't match!"
   }
 }
 
 fn do_func_idxs_equal(
-  a: finger_tree.FingerTree(structure_types.FuncIDX),
-  b: finger_tree.FingerTree(structure_types.FuncIDX),
+  a: List(structure_types.FuncIDX),
+  b: List(structure_types.FuncIDX),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b))
-      if rest_a == finger_tree.empty && rest_b == finger_tree.empty
-    -> {
-      a |> should.equal(b)
-      Nil
-    }
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [a], [b] -> a |> should.equal(b)
+    [a, ..rest_a], [b, ..rest_b] -> {
       a |> should.equal(b)
       do_func_idxs_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
-    _, _ -> {
-      io.debug(#("funcs are not equal: ", a, " != ", b))
-      panic as "FuncIDXs were not equal"
-    }
+    _, _ -> panic as "FuncIDXs were not equal"
   }
 }
 
@@ -487,21 +459,15 @@ fn rec_type_equals(a: structure_types.RecType, b: structure_types.RecType) {
 }
 
 fn do_sub_types_equal(
-  a: finger_tree.FingerTree(structure_types.SubType),
-  b: finger_tree.FingerTree(structure_types.SubType),
+  a: List(structure_types.SubType),
+  b: List(structure_types.SubType),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b))
-      if rest_a == finger_tree.empty && rest_b == finger_tree.empty
-    -> {
-      sub_type_equals(a, b)
-      Nil
-    }
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [a], [b] -> sub_type_equals(a, b)
+    [a, ..rest_a], [b, ..rest_b] -> {
       sub_type_equals(a, b)
       do_sub_types_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
     _, _ -> panic as "SubTypes were not equal"
   }
 }
@@ -510,7 +476,7 @@ pub fn decode_rec_type_test() {
   let subtype_one =
     structure_types.SubType(
       True,
-      finger_tree.new(),
+      [],
       structure_types.ArrayCompositeType(
         structure_types.ArrayType(structure_types.FieldType(
           structure_types.ValTypeStorageType(structure_types.I32ValType),
@@ -518,8 +484,7 @@ pub fn decode_rec_type_test() {
         )),
       ),
     )
-  let rec_type_one =
-    structure_types.RecType(finger_tree.from_list([subtype_one]))
+  let rec_type_one = structure_types.RecType([subtype_one])
 
   <<0x5E, 0x7F, 0x00>>
   |> decode_type_equals_helper(
@@ -533,25 +498,18 @@ pub fn decode_rec_type_test() {
   let subtype_two =
     structure_types.SubType(
       False,
-      finger_tree.from_list([
-        structure_types.TypeIDX(idx_one),
-        structure_types.TypeIDX(idx_two),
-      ]),
+      [structure_types.TypeIDX(idx_one), structure_types.TypeIDX(idx_two)],
       structure_types.StructCompositeType(
-        structure_types.StructType(
-          finger_tree.from_list([
-            structure_types.FieldType(
-              structure_types.ValTypeStorageType(structure_types.I32ValType),
-              structure_types.Const,
-            ),
-          ]),
-        ),
+        structure_types.StructType([
+          structure_types.FieldType(
+            structure_types.ValTypeStorageType(structure_types.I32ValType),
+            structure_types.Const,
+          ),
+        ]),
       ),
     )
 
-  let rec_type_two =
-    structure_types.RecType(finger_tree.from_list([subtype_two]))
-
+  let rec_type_two = structure_types.RecType([subtype_two])
   <<0x50, 0x02, 0x01, 0x02, 0x5F, 0x01, 0x7F, 0x00>>
   |> decode_type_equals_helper(
     rec_type_two,
@@ -563,7 +521,7 @@ pub fn decode_rec_type_test() {
     0x4E, 0x02, 0x5E, 0x7F, 0x00, 0x50, 0x02, 0x01, 0x02, 0x5F, 0x01, 0x7F, 0x00,
   >>
   |> decode_type_equals_helper(
-    structure_types.RecType(finger_tree.from_list([subtype_one, subtype_two])),
+    structure_types.RecType([subtype_one, subtype_two]),
     types.decode_rec_type,
     rec_type_equals,
   )
@@ -626,28 +584,23 @@ fn type_section_equals(
 }
 
 fn do_rec_types_equal(
-  a: finger_tree.FingerTree(structure_types.RecType),
-  b: finger_tree.FingerTree(structure_types.RecType),
+  a: List(structure_types.RecType),
+  b: List(structure_types.RecType),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b))
-      if rest_a == finger_tree.empty && rest_b == finger_tree.empty
-    -> {
-      rec_type_equals(a, b)
-      Nil
-    }
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [], [] -> Nil
+    [a], [b] -> rec_type_equals(a, b)
+    [a, ..rest_a], [b, ..rest_b] -> {
       rec_type_equals(a, b)
       do_rec_types_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
     _, _ -> panic as "RecTypes were not equal"
   }
 }
 
 // 1 type section
 pub fn decode_type_section_test() {
-  let empty_type_section = structure_modules.TypeSection(finger_tree.new())
+  let empty_type_section = structure_modules.TypeSection([])
 
   <<0x01, 0x01, 0x00>>
   |> decode_type_equals_helper(
@@ -657,26 +610,23 @@ pub fn decode_type_section_test() {
   )
 
   let array_type_example =
-    structure_types.RecType(
-      finger_tree.from_list([
-        structure_types.SubType(
-          True,
-          finger_tree.new(),
-          structure_types.ArrayCompositeType(
-            structure_types.ArrayType(structure_types.FieldType(
-              structure_types.ValTypeStorageType(structure_types.I32ValType),
-              structure_types.Const,
-            )),
-          ),
+    structure_types.RecType([
+      structure_types.SubType(
+        True,
+        [],
+        structure_types.ArrayCompositeType(
+          structure_types.ArrayType(structure_types.FieldType(
+            structure_types.ValTypeStorageType(structure_types.I32ValType),
+            structure_types.Const,
+          )),
         ),
-      ]),
-    )
+      ),
+    ])
   let array_example_type = <<0x5E, 0x7F, 0x00>>
   let array_example_length = <<0x01>>
 
   let example_type_section_length = <<0x04>>
-  let example_type_section =
-    structure_modules.TypeSection(finger_tree.from_list([array_type_example]))
+  let example_type_section = structure_modules.TypeSection([array_type_example])
 
   <<
     0x01,
@@ -703,21 +653,16 @@ fn import_section_equals(
 }
 
 fn do_imports_equal(
-  a: finger_tree.FingerTree(structure_types.Import),
-  b: finger_tree.FingerTree(structure_types.Import),
+  a: List(structure_types.Import),
+  b: List(structure_types.Import),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b))
-      if rest_a == finger_tree.empty && rest_b == finger_tree.empty
-    -> {
-      import_equals(a, b)
-      Nil
-    }
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [], [] -> Nil
+    [a], [b] -> import_equals(a, b)
+    [a, ..rest_a], [b, ..rest_b] -> {
       import_equals(a, b)
       do_imports_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
     _, _ -> panic as "Imports were not equal"
   }
 }
@@ -758,7 +703,7 @@ fn import_equals(a: structure_types.Import, b: structure_types.Import) {
 
 // 2 import section
 pub fn decode_import_section_test() {
-  let empty_import_section = structure_modules.ImportSection(finger_tree.new())
+  let empty_import_section = structure_modules.ImportSection([])
 
   <<0x02, 0x01, 0x00>>
   |> decode_type_equals_helper(
@@ -794,9 +739,7 @@ pub fn decode_import_section_test() {
   let func_import_bytes_length = bit_array.byte_size(func_import_bytes)
 
   let example_import_section =
-    structure_modules.ImportSection(
-      finger_tree.from_list([func_import_example]),
-    )
+    structure_modules.ImportSection([func_import_example])
   <<0x02, func_import_bytes_length, func_import_bytes:bits>>
   |> decode_type_equals_helper(
     Some(example_import_section),
@@ -816,10 +759,8 @@ fn function_section_equals(
   }
 }
 
-// 3 function section
 pub fn decode_function_section_test() {
-  let empty_function_section =
-    structure_modules.FunctionSection(finger_tree.new())
+  let empty_function_section = structure_modules.FunctionSection([])
 
   <<0x03, 0x01, 0x00>>
   |> decode_type_equals_helper(
@@ -828,12 +769,9 @@ pub fn decode_function_section_test() {
     function_section_equals,
   )
 
-  let assert Ok(indexes) =
-    [1, 2, 3, 4]
-    |> finger_tree.from_list
-    |> finger_tree.try_map(numbers.u32)
+  let assert Ok(indexes) = [1, 2, 3, 4] |> list.try_map(numbers.u32)
 
-  let indexes = indexes |> finger_tree.map(structure_types.TypeIDX)
+  let indexes = indexes |> list.map(structure_types.TypeIDX)
 
   let function_section = structure_modules.FunctionSection(indexes)
 
@@ -857,15 +795,16 @@ fn table_section_equals(
 }
 
 fn do_tables_equal(
-  a: finger_tree.FingerTree(structure_types.Table),
-  b: finger_tree.FingerTree(structure_types.Table),
+  a: List(structure_types.Table),
+  b: List(structure_types.Table),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [], [] -> Nil
+    [a], [b] -> a |> table_equals(b)
+    [a, ..rest_a], [b, ..rest_b] -> {
       a |> table_equals(b)
       do_tables_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
     _, _ -> panic as "Tables were not equal"
   }
 }
@@ -917,7 +856,7 @@ fn table_equals(a: structure_types.Table, b: structure_types.Table) {
 
 // 4 table section
 pub fn decode_table_section_test() {
-  let empty_table_section = structure_modules.TableSection(finger_tree.new())
+  let empty_table_section = structure_modules.TableSection([])
 
   <<0x04, 0x01, 0x00>>
   |> decode_type_equals_helper(
@@ -951,7 +890,7 @@ pub fn decode_table_section_test() {
 
   second_table_bits
   |> decode_type_equals_helper(
-    Some(structure_modules.TableSection(finger_tree.from_list([second_table]))),
+    Some(structure_modules.TableSection([second_table])),
     modules.decode_table_section,
     table_section_equals,
   )
@@ -974,9 +913,7 @@ pub fn decode_table_section_test() {
 
   <<0x04, 0x09, 0x01, table_bytes_three:bits>>
   |> decode_type_equals_helper(
-    Some(
-      structure_modules.TableSection(finger_tree.from_list([table_init_three])),
-    ),
+    Some(structure_modules.TableSection([table_init_three])),
     modules.decode_table_section,
     table_section_equals,
   )
@@ -990,15 +927,16 @@ fn mem_types_equals(a: structure_types.MemType, b: structure_types.MemType) {
 }
 
 fn do_mem_types_equal(
-  a: finger_tree.FingerTree(structure_types.MemType),
-  b: finger_tree.FingerTree(structure_types.MemType),
+  a: List(structure_types.MemType),
+  b: List(structure_types.MemType),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [a], [b] -> a |> mem_types_equals(b)
+
+    [a, ..rest_a], [b, ..rest_b] -> {
       a |> mem_types_equals(b)
       do_mem_types_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
     _, _ -> panic as "MemoryTypes were not equal"
   }
 }
@@ -1024,7 +962,7 @@ fn memory_section_equals(
 
 // 5 memory section
 pub fn decode_memory_section_test() {
-  let empty_memory_section = structure_modules.MemorySection(finger_tree.new())
+  let empty_memory_section = structure_modules.MemorySection([])
 
   <<0x05, 0x01, 0x00>>
   |> decode_type_equals_helper(
@@ -1044,9 +982,7 @@ pub fn decode_memory_section_test() {
 
   <<0x05, section_length:bits, memory_count:bits, memory_type:bits>>
   |> decode_type_equals_helper(
-    Some(
-      structure_modules.MemorySection(finger_tree.from_list([example_memory])),
-    ),
+    Some(structure_modules.MemorySection([example_memory])),
     modules.decode_memory_section,
     memory_section_equals,
   )
@@ -1066,15 +1002,16 @@ fn globals_equals(a: structure_types.Global, b: structure_types.Global) {
 }
 
 fn do_globals_equal(
-  a: finger_tree.FingerTree(structure_types.Global),
-  b: finger_tree.FingerTree(structure_types.Global),
+  a: List(structure_types.Global),
+  b: List(structure_types.Global),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [a], [b] -> a |> globals_equals(b)
+
+    [a, ..rest_a], [b, ..rest_b] -> {
       a |> globals_equals(b)
       do_globals_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
     _, _ -> panic as "Globals were not equal"
   }
 }
@@ -1093,7 +1030,7 @@ fn global_section_equals(
 
 // 6 global section
 pub fn decode_global_section_test() {
-  let empty_global_section = structure_modules.GlobalSection(finger_tree.new())
+  let empty_global_section = structure_modules.GlobalSection([])
 
   <<0x06, 0x01, 0x00>>
   |> decode_type_equals_helper(
@@ -1117,9 +1054,7 @@ pub fn decode_global_section_test() {
 
   <<0x06, 0x07, 0x01, 0x7F, 0x01, 0x41, 0xC2, 0x00, 0x0B>>
   |> decode_type_equals_helper(
-    Some(
-      structure_modules.GlobalSection(finger_tree.from_list([example_global])),
-    ),
+    Some(structure_modules.GlobalSection([example_global])),
     modules.decode_global_section,
     global_section_equals,
   )
@@ -1156,15 +1091,16 @@ fn exports_equals(a: structure_types.Export, b: structure_types.Export) {
 }
 
 fn do_exports_equal(
-  a: finger_tree.FingerTree(structure_types.Export),
-  b: finger_tree.FingerTree(structure_types.Export),
+  a: List(structure_types.Export),
+  b: List(structure_types.Export),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [a], [b] -> a |> exports_equals(b)
+
+    [a, ..rest_a], [b, ..rest_b] -> {
       a |> exports_equals(b)
       do_exports_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
     _, _ -> panic as "Exports were not equal"
   }
 }
@@ -1182,7 +1118,7 @@ fn export_section_equals(
 }
 
 pub fn decode_export_section_test() {
-  let empty_export_section = structure_modules.ExportSection(finger_tree.new())
+  let empty_export_section = structure_modules.ExportSection([])
 
   <<0x07, 0x01, 0x00>>
   |> decode_type_equals_helper(
@@ -1206,14 +1142,12 @@ pub fn decode_export_section_test() {
     structure_types.GlobalExport("global", structure_types.GlobalIDX(four))
 
   let export_section =
-    structure_modules.ExportSection(
-      finger_tree.from_list([
-        func_export,
-        table_export,
-        mem_export,
-        global_export,
-      ]),
-    )
+    structure_modules.ExportSection([
+      func_export,
+      table_export,
+      mem_export,
+      global_export,
+    ])
   <<
     0x07, 31,
     // placeholder
@@ -1274,16 +1208,17 @@ pub fn decode_start_section_test() {
 
 // 9 element section
 fn do_expressions_equals(
-  a: finger_tree.FingerTree(structure_types.Expr),
-  b: finger_tree.FingerTree(structure_types.Expr),
+  a: List(structure_types.Expr),
+  b: List(structure_types.Expr),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [a], [b] -> a |> expr_equals(b)
+
+    [a, ..rest_a], [b, ..rest_b] -> {
       a |> expr_equals(b)
       do_expressions_equals(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
-    _, _ -> panic as "Expressions were not equal"
+    _, _ -> panic as "Exports were not equal"
   }
 }
 
@@ -1312,15 +1247,16 @@ fn elements_equals(a: structure_types.Elem, b: structure_types.Elem) {
 }
 
 fn do_elements_equal(
-  a: finger_tree.FingerTree(structure_types.Elem),
-  b: finger_tree.FingerTree(structure_types.Elem),
+  a: List(structure_types.Elem),
+  b: List(structure_types.Elem),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
+  case a, b {
+    [a], [b] -> a |> elements_equals(b)
+
+    [a, ..rest_a], [b, ..rest_b] -> {
       a |> elements_equals(b)
       do_elements_equal(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
     _, _ -> panic as "Elements were not equal"
   }
 }
@@ -1338,8 +1274,7 @@ fn element_section_equals(
 }
 
 pub fn decode_element_section_test() {
-  let empty_element_section =
-    structure_modules.ElementSection(finger_tree.new())
+  let empty_element_section = structure_modules.ElementSection([])
 
   <<0x09, 0x01, 0x00>>
   |> decode_type_equals_helper(
@@ -1363,7 +1298,7 @@ pub fn decode_element_section_test() {
 
   let ref_func =
     structure_types.HeapTypeRefType(structure_types.FuncHeapType, False)
-  // Elem(type_: RefType, init: FingerTree(Expr), mode: ElemMode)
+  // Elem(type_: RefType, init: List(Expr), mode: ElemMode)
 
   let ref_null_i31 = structure_types.I31RefType
   let null_i31 =
@@ -1371,17 +1306,15 @@ pub fn decode_element_section_test() {
     |> ref.null(structure_types.I31HeapType)
     |> expression.end_unwrap()
 
-  let three_null_i31 = finger_tree.from_list([null_i31, null_i31, null_i31])
+  let three_null_i31 = [null_i31, null_i31, null_i31]
 
-  let three_func_idx =
-    finger_tree.from_list([
-      structure_types.FuncIDX(zero),
-      structure_types.FuncIDX(one),
-      structure_types.FuncIDX(two),
-    ])
+  let three_func_idx = [
+    structure_types.FuncIDX(zero),
+    structure_types.FuncIDX(one),
+    structure_types.FuncIDX(two),
+  ]
 
-  let three_func_idx_expression =
-    three_func_idx |> finger_tree.map(func_idx_to_expr)
+  let three_func_idx_expression = three_func_idx |> list.map(func_idx_to_expr)
 
   // type 0 -> (ref func) (init: FuncIDX*) Active(TableIDX(0), Offset(offset_fourty_two))
   let element_zero =
@@ -1583,18 +1516,16 @@ pub fn decode_element_section_test() {
   )
 
   let element_section =
-    structure_modules.ElementSection(
-      finger_tree.from_list([
-        element_zero,
-        element_one,
-        element_two,
-        element_three,
-        element_four,
-        element_five,
-        element_six,
-        element_seven,
-      ]),
-    )
+    structure_modules.ElementSection([
+      element_zero,
+      element_one,
+      element_two,
+      element_three,
+      element_four,
+      element_five,
+      element_six,
+      element_seven,
+    ])
 
   let element_section_byte_length =
     1
@@ -1646,15 +1577,16 @@ fn locals_equals(a: structure_types.Locals, b: structure_types.Locals) {
 }
 
 fn do_locals_equals(
-  a: finger_tree.FingerTree(structure_types.Locals),
-  b: finger_tree.FingerTree(structure_types.Locals),
+  a: List(structure_types.Locals),
+  b: List(structure_types.Locals),
 ) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
-      locals_equals(a, b)
+  case a, b {
+    [a], [b] -> a |> locals_equals(b)
+
+    [a, ..rest_a], [b, ..rest_b] -> {
+      a |> locals_equals(b)
       do_locals_equals(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
     _, _ -> panic as "Locals were not equal"
   }
 }
@@ -1665,17 +1597,15 @@ fn codes_equals(a: structure_types.Code, b: structure_types.Code) {
   expr_equals(a.body, b.body)
 }
 
-fn do_codes_equals(
-  a: finger_tree.FingerTree(structure_types.Code),
-  b: finger_tree.FingerTree(structure_types.Code),
-) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
-      codes_equals(a, b)
+fn do_codes_equals(a: List(structure_types.Code), b: List(structure_types.Code)) {
+  case a, b {
+    [a], [b] -> a |> codes_equals(b)
+
+    [a, ..rest_a], [b, ..rest_b] -> {
+      a |> codes_equals(b)
       do_codes_equals(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
-    _, _ -> panic as "Codes were not equal"
+    _, _ -> panic as "Exports were not equal"
   }
 }
 
@@ -1693,27 +1623,22 @@ fn code_section_equals(
 
 pub fn code_section_test() {
   let assert Ok(two) = numbers.u32(2)
-  let add_locals =
-    finger_tree.from_list([
-      structure_types.Locals(two, structure_types.I32ValType),
-    ])
+  let add_locals = [structure_types.Locals(two, structure_types.I32ValType)]
 
   let assert Ok(one) = numbers.i32(1)
   let assert Ok(forty_one) = numbers.i32(41)
 
   let code_section =
-    structure_modules.CodeSection(
-      finger_tree.from_list([
-        structure_types.Code(
-          add_locals,
-          expression.new()
-            |> i32.const_(forty_one)
-            |> i32.const_(one)
-            |> i32.add()
-            |> expression.end_unwrap(),
-        ),
-      ]),
-    )
+    structure_modules.CodeSection([
+      structure_types.Code(
+        add_locals,
+        expression.new()
+          |> i32.const_(forty_one)
+          |> i32.const_(one)
+          |> i32.add()
+          |> expression.end_unwrap(),
+      ),
+    ])
 
   let code_section_bytes = <<
     0x0A, 0x0B,
@@ -1729,9 +1654,9 @@ pub fn code_section_test() {
     // 2 i32s
     // body
     0x41, 41,
-    // i32.const 41 
+    // i32.const 41
     0x41, 1,
-    // i32.const 1 
+    // i32.const 1
     0x6A,
     // i32.add
     0x0B,
@@ -1761,17 +1686,15 @@ fn data_equals(a: structure_types.Data, b: structure_types.Data) {
   }
 }
 
-fn do_data_equals(
-  a: finger_tree.FingerTree(structure_types.Data),
-  b: finger_tree.FingerTree(structure_types.Data),
-) {
-  case finger_tree.shift(a), finger_tree.shift(b) {
-    Ok(#(a, rest_a)), Ok(#(b, rest_b)) -> {
-      data_equals(a, b)
+fn do_data_equals(a: List(structure_types.Data), b: List(structure_types.Data)) {
+  case a, b {
+    [a], [b] -> a |> data_equals(b)
+
+    [a, ..rest_a], [b, ..rest_b] -> {
+      a |> data_equals(b)
       do_data_equals(rest_a, rest_b)
     }
-    Error(Nil), Error(Nil) -> Nil
-    _, _ -> panic as "Data was not equal"
+    _, _ -> panic as "Datas were not equal"
   }
 }
 
@@ -1816,7 +1739,7 @@ pub fn data_section_test() {
       0x07, 0x08, 0x09,
     >>)
 
-  let empty_data_section = structure_modules.DataSection(finger_tree.new())
+  let empty_data_section = structure_modules.DataSection([])
 
   <<0x0B, 0x01, 0x00>>
   |> decode_type_equals_helper(
@@ -1826,9 +1749,11 @@ pub fn data_section_test() {
   )
 
   let data_section =
-    structure_modules.DataSection(
-      finger_tree.from_list([active_data_zero_idx, passive_data, active_data]),
-    )
+    structure_modules.DataSection([
+      active_data_zero_idx,
+      passive_data,
+      active_data,
+    ])
 
   let data_section_bytes = <<
     0x0B, 23,

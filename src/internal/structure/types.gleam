@@ -1,6 +1,6 @@
+import gleam/list
 import gleam/option.{type Option}
 import gleam/result
-import internal/finger_tree.{type FingerTree}
 import internal/structure/common.{between}
 import internal/structure/numbers.{
   type F32, type F64, type I32, type I64, type U32, type V128Value,
@@ -78,28 +78,10 @@ pub opaque type LaneIDX8 {
   LaneIDX8(val: Int)
 }
 
-/// This type is used to describe a number type, namely the primary wasm number types
-/// Please see: https://webassembly.github.io/gc/core/syntax/types.html#number-types
-pub type NumType {
-  I32NumType
-  I64NumType
-  F32NumType
-  F64NumType
-}
-
-/// A bool is always an I32
-pub const bool = I32NumType
-
-/// This type is used to describe a SIMD vector type
-/// pleasae see: https://webassembly.github.io/gc/core/syntax/types.html#vector-types
-pub type VecType {
-  VecType
-}
-
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#heap-types
 /// For validation and execution, please see: https://webassembly.github.io/gc/core/valid/conventions.html#types
-/// Please note that Abstract Heap Types are a seperate type, and are combined with heap types
-/// in this convention for the sake of clarity, and ease of encoding and decoding
+/// Please note that Abstract Heap Types are a seperate type, and are combined here with
+/// heap types in this convention for the sake of clarity and performance.
 pub type HeapType {
   FuncHeapType
   NoFuncHeapType
@@ -115,26 +97,10 @@ pub type HeapType {
   BotHeapType
 }
 
-/// This is a collection of all the abstract classifications of RefTypes
-/// Please see: https://webassembly.github.io/gc/core/syntax/types.html#heap-types
-pub type AbstractHeapType {
-  FuncAbstractHeapType
-  NoAbstractFuncHeapType
-  ExternAbstractHeapType
-  NoExternAbstractHeapType
-  AnyAbstractHeapType
-  EqAbstractHeapType
-  I31AbstractHeapType
-  StructAbstractHeapType
-  ArrayAbstractHeapType
-  NoneAbstractHeapType
-}
-
-/// A refrence type describes a refrence to an object that may or may not be nullable
+/// A refrence type classifies a refrence by it's underlying type
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#reference-types
 pub type RefType {
   HeapTypeRefType(ht: HeapType, null: Bool)
-
   /// Shorthand for (ref null Any)
   AnyRefType
   /// Shorthand for (ref null Eq)
@@ -207,19 +173,19 @@ pub type BlockType {
 
 /// An instruction type is two result types, one for the parameters, and one for the results.
 pub type InstructionType {
-  InstructionType(parameters: FingerTree(ValType), results: FingerTree(ValType))
+  InstructionType(parameters: List(ValType), results: List(ValType))
 }
 
 /// A function type describes the shape of the parameters and results of a given function.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#function-types
 pub type FuncType {
-  FuncType(parameters: FingerTree(ValType), results: FingerTree(ValType))
+  FuncType(parameters: List(ValType), results: List(ValType))
 }
 
 /// A struct type describes the shape of the fields of a given struct.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#aggregate-types
 pub type StructType {
-  StructType(ft: FingerTree(FieldType))
+  StructType(ft: List(FieldType))
 }
 
 /// An array type describes an array with the given field type.
@@ -228,7 +194,7 @@ pub type ArrayType {
   ArrayType(ft: FieldType)
 }
 
-/// A field type is classified by a "StorageType" and a "Mutability" state. 
+/// A field type is classified by a "StorageType" and a "Mutability" state.
 /// Please See: https://webassembly.github.io/gc/core/syntax/types.html#aggregate-types
 pub type FieldType {
   FieldType(st: StorageType, mut: Mut)
@@ -273,7 +239,7 @@ pub type CompositeType {
 /// It is used to describe the shape of mutually recursive SubTypes.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#recursive-types
 pub type RecType {
-  RecType(sub_types: FingerTree(SubType))
+  RecType(sub_types: List(SubType))
 }
 
 /// An index into an array of types, either a recursive type, a module subtype, or a
@@ -327,7 +293,7 @@ pub type MemIDX {
 /// also an array of matching subtype indexes that the type matches.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#recursive-types
 pub type SubType {
-  SubType(final: Bool, t: FingerTree(TypeIDX), ct: CompositeType)
+  SubType(final: Bool, t: List(TypeIDX), ct: CompositeType)
 }
 
 /// A definition of a limit range, which has a minimum, and an optional maximum which defaults
@@ -815,7 +781,7 @@ pub type Instruction {
   ExternConvertAny
   Drop
   Select
-  SelectT(vt: FingerTree(ValType))
+  SelectT(vt: List(ValType))
   LocalGet(idx: LocalIDX)
   LocalSet(idx: LocalIDX)
   LocalTee(idx: LocalIDX)
@@ -886,12 +852,12 @@ pub type Instruction {
   Loop(bt: BlockType, instructions: Expr)
   If(
     bt: BlockType,
-    instructions: FingerTree(Instruction),
-    else_instructions: Option(FingerTree(Instruction)),
+    instructions: List(Instruction),
+    else_instructions: Option(List(Instruction)),
   )
   Br(label: LabelIDX)
   BrIf(label: LabelIDX)
-  BrTable(labels: FingerTree(LabelIDX), default: LabelIDX)
+  BrTable(labels: List(LabelIDX), default: LabelIDX)
   BrOnNull(label: LabelIDX)
   BrOnNonNull(label: LabelIDX)
   BrOnCast(label: LabelIDX, rt1: RefType, rt2: RefType)
@@ -900,7 +866,6 @@ pub type Instruction {
   Call(func_idx: FuncIDX)
   CallRef(type_idx: TypeIDX)
   CallIndirect(table_idx: TableIDX, type_idx: TypeIDX)
-  // expand(TypeSection[type_idx].subtype[sub_type_index]) -> CompositeType
   ReturnCall(func_idx: FuncIDX)
   ReturnCallRef(type_idx: TypeIDX)
   ReturnCallIndirect(table_idx: TableIDX, type_idx: TypeIDX)
@@ -919,19 +884,13 @@ pub fn get_instruction_type(
   case instruction {
     End | Else -> Error(Nil)
 
-    I64Const(_) ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([I64ValType])))
+    I64Const(_) -> Ok(InstructionType([], [I64ValType]))
     I32Const(_) | ArrayLen | I31GetS | I31GetU ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([I32ValType])))
-    F64Const(_) ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([F64ValType])))
-    F32Const(_) ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([F32ValType])))
+      Ok(InstructionType([], [I32ValType]))
+    F64Const(_) -> Ok(InstructionType([], [F64ValType]))
+    F32Const(_) -> Ok(InstructionType([], [F32ValType]))
     I64Popcnt | I64Ctz | I64Clz | I64Extend32S | I64Extend16S | I64Extend8S ->
-      Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([I64ValType]),
-      ))
+      Ok(InstructionType([I64ValType], [I64ValType]))
     I32Popcnt
     | I32Ctz
     | I32Clz
@@ -943,21 +902,11 @@ pub fn get_instruction_type(
     | I32Load16U(_)
     | I32Load8S(_)
     | I32Load8U(_)
-    | MemoryGrow ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
+    | MemoryGrow -> Ok(InstructionType([I32ValType], [I32ValType]))
     F64Nearest | F64Trunc | F64Floor | F64Ceil | F64Sqrt | F64Neg | F64Abs ->
-      Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([F64ValType]),
-      ))
+      Ok(InstructionType([F64ValType], [F64ValType]))
     F32Nearest | F32Trunc | F32Floor | F32Ceil | F32Sqrt | F32Neg | F32Abs ->
-      Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([F32ValType]),
-      ))
+      Ok(InstructionType([F32ValType], [F32ValType]))
     I64Rotr
     | I64Rotl
     | I64ShrS
@@ -972,11 +921,7 @@ pub fn get_instruction_type(
     | I64DivU
     | I64Mul
     | I64Sub
-    | I64Add ->
-      Ok(InstructionType(
-        finger_tree.from_list([I64ValType, I64ValType]),
-        finger_tree.from_list([I64ValType]),
-      ))
+    | I64Add -> Ok(InstructionType([I64ValType, I64ValType], [I64ValType]))
     I32Rotr
     | I32Rotl
     | I32ShrS
@@ -1001,26 +946,12 @@ pub fn get_instruction_type(
     | I32LtS
     | I32LtU
     | I32Ne
-    | I32Eq ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType, I32ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
+    | I32Eq -> Ok(InstructionType([I32ValType, I32ValType], [I32ValType]))
     F64Copysign | F64Max | F64Min | F64Div | F64Mul | F64Sub | F64Add ->
-      Ok(InstructionType(
-        finger_tree.from_list([F64ValType, F64ValType]),
-        finger_tree.from_list([F64ValType]),
-      ))
+      Ok(InstructionType([F64ValType, F64ValType], [F64ValType]))
     F32Copysign | F32Max | F32Min | F32Div | F32Mul | F32Sub | F32Add ->
-      Ok(InstructionType(
-        finger_tree.from_list([F32ValType, F32ValType]),
-        finger_tree.from_list([F32ValType]),
-      ))
-    I64Eqz | I32WrapI64 ->
-      Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
+      Ok(InstructionType([F32ValType, F32ValType], [F32ValType]))
+    I64Eqz | I32WrapI64 -> Ok(InstructionType([I64ValType], [I32ValType]))
     I64GeS
     | I64GeU
     | I64LeS
@@ -1030,22 +961,12 @@ pub fn get_instruction_type(
     | I64LtS
     | I64LtU
     | I64Ne
-    | I64Eq ->
-      Ok(InstructionType(
-        finger_tree.from_list([I64ValType, I64ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
+    | I64Eq -> Ok(InstructionType([I64ValType, I64ValType], [I32ValType]))
 
     F64Ge | F64Le | F64Gt | F64Lt | F64Ne | F64Eq ->
-      Ok(InstructionType(
-        finger_tree.from_list([F64ValType, F64ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
+      Ok(InstructionType([F64ValType, F64ValType], [I32ValType]))
     F32Ge | F32Le | F32Gt | F32Lt | F32Ne | F32Eq ->
-      Ok(InstructionType(
-        finger_tree.from_list([F32ValType, F32ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
+      Ok(InstructionType([F32ValType, F32ValType], [I32ValType]))
     I64ExtendI32S
     | I64ExtendI32U
     | I64Load(_)
@@ -1054,74 +975,32 @@ pub fn get_instruction_type(
     | I64Load8S(_)
     | I64Load8U(_)
     | I64Load32S(_)
-    | I64Load32U(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([I64ValType]),
-      ))
+    | I64Load32U(_) -> Ok(InstructionType([I32ValType], [I64ValType]))
     I64TruncF64S
     | I64TruncF64U
     | I64TruncSatF64S
     | I64TruncSatF64U
-    | I64ReinterpretF64 ->
-      Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([I64ValType]),
-      ))
+    | I64ReinterpretF64 -> Ok(InstructionType([F64ValType], [I64ValType]))
     I64TruncF32S | I64TruncF32U | I64TruncSatF32S | I64TruncSatF32U ->
-      Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([I64ValType]),
-      ))
+      Ok(InstructionType([F32ValType], [I64ValType]))
     I32TruncF64S | I32TruncF64U | I32TruncSatF64S | I32TruncSatF64U ->
-      Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
+      Ok(InstructionType([F64ValType], [I32ValType]))
     I32TruncF32S
     | I32TruncF32U
     | I32TruncSatF32S
     | I32TruncSatF32U
-    | I32ReinterpretF32 ->
-      Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
-    F32DemoteF64 ->
-      Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([F64ValType]),
-      ))
-    F64PromoteF32 ->
-      Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([F32ValType]),
-      ))
+    | I32ReinterpretF32 -> Ok(InstructionType([F32ValType], [I32ValType]))
+    F32DemoteF64 -> Ok(InstructionType([F32ValType], [F64ValType]))
+    F64PromoteF32 -> Ok(InstructionType([F64ValType], [F32ValType]))
     F64ConvertI64S | F64ConvertI64U | F64ReinterpretI64 ->
-      Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([F64ValType]),
-      ))
+      Ok(InstructionType([I64ValType], [F64ValType]))
     F64ConvertI32S | F64ConvertI32U | F64Load(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([F64ValType]),
-      ))
+      Ok(InstructionType([I32ValType], [F64ValType]))
     F32ConvertI64S | F32ConvertI64U ->
-      Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([F32ValType]),
-      ))
+      Ok(InstructionType([I64ValType], [F32ValType]))
     F32ConvertI32S | F32ConvertI32U | F32ReinterpretI32 | F32Load(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([F32ValType]),
-      ))
-    V128Const(_) ->
-      Ok(InstructionType(
-        finger_tree.new(),
-        finger_tree.from_list([V128ValType]),
-      ))
+      Ok(InstructionType([I32ValType], [F32ValType]))
+    V128Const(_) -> Ok(InstructionType([], [V128ValType]))
     V128Not
     | I64x2Neg
     | I64x2Abs
@@ -1159,11 +1038,7 @@ pub fn get_instruction_type(
     | F32x4DemoteF64x2Zero
     | F64x2ConvertLowI32x4S
     | F64x2ConvertLowI32x4U
-    | F64x2PromoteLowF32x4 ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
+    | F64x2PromoteLowF32x4 -> Ok(InstructionType([V128ValType], [V128ValType]))
     V128Xor
     | V128AndNot
     | V128Or
@@ -1296,16 +1171,11 @@ pub fn get_instruction_type(
     | F32x4Mul
     | F32x4Sub
     | F32x4Add
-    | I64x2Mul ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType, V128ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
+    | I64x2Mul -> Ok(InstructionType([V128ValType, V128ValType], [V128ValType]))
     V128Bitselect ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType, V128ValType, V128ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
+      Ok(
+        InstructionType([V128ValType, V128ValType, V128ValType], [V128ValType]),
+      )
     V128AnyTrue
     | I8x16ExtractLaneS(_)
     | I16x8ExtractLaneS(_)
@@ -1318,11 +1188,7 @@ pub fn get_instruction_type(
     | I64x2Bitmask
     | I32x4Bitmask
     | I16x8Bitmask
-    | I8x16Bitmask ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
+    | I8x16Bitmask -> Ok(InstructionType([V128ValType], [I32ValType]))
     I32x4Splat
     | I16x8Splat
     | I8x16Splat
@@ -1338,46 +1204,14 @@ pub fn get_instruction_type(
     | V128Load64Splat(_)
     | V128Load32Splat(_)
     | V128Load16Splat(_)
-    | V128Load8Splat(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
-    I64x2Splat ->
-      Ok(InstructionType(
-        finger_tree.from_list([I64ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
-    F32x4Splat ->
-      Ok(InstructionType(
-        finger_tree.from_list([F32ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
-    F64x2Splat ->
-      Ok(InstructionType(
-        finger_tree.from_list([F64ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
-    I64x2ExtractLane(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([I64ValType]),
-      ))
-    I32x4ExtractLane(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([I32ValType]),
-      ))
-    F32x4ExtractLane(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([F32ValType]),
-      ))
-    F64x2ExtractLane(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType]),
-        finger_tree.from_list([F64ValType]),
-      ))
+    | V128Load8Splat(_) -> Ok(InstructionType([I32ValType], [V128ValType]))
+    I64x2Splat -> Ok(InstructionType([I64ValType], [V128ValType]))
+    F32x4Splat -> Ok(InstructionType([F32ValType], [V128ValType]))
+    F64x2Splat -> Ok(InstructionType([F64ValType], [V128ValType]))
+    I64x2ExtractLane(_) -> Ok(InstructionType([V128ValType], [I64ValType]))
+    I32x4ExtractLane(_) -> Ok(InstructionType([V128ValType], [I32ValType]))
+    F32x4ExtractLane(_) -> Ok(InstructionType([V128ValType], [F32ValType]))
+    F64x2ExtractLane(_) -> Ok(InstructionType([V128ValType], [F64ValType]))
     I8x16ReplaceLane(_)
     | I16x8ReplaceLane(_)
     | I32x4ReplaceLane(_)
@@ -1392,27 +1226,14 @@ pub fn get_instruction_type(
     | I16x8Shl
     | I8x16ShrS
     | I8x16ShrU
-    | I8x16Shl ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType, I32ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
+    | I8x16Shl -> Ok(InstructionType([V128ValType, I32ValType], [V128ValType]))
     I64x2ReplaceLane(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType, I64ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
+      Ok(InstructionType([V128ValType, I64ValType], [V128ValType]))
     F32x4ReplaceLane(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType, F32ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
+      Ok(InstructionType([V128ValType, F32ValType], [V128ValType]))
     F64x2ReplaceLane(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([V128ValType, F64ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
-    Nop -> Ok(InstructionType(finger_tree.new(), finger_tree.new()))
+      Ok(InstructionType([V128ValType, F64ValType], [V128ValType]))
+    Nop -> Ok(InstructionType([], []))
 
     // TODO: Each of these instructions need to be implemented and checked
     RefFunc(_)
@@ -1478,79 +1299,53 @@ pub fn get_instruction_type(
     | StructNew(_)
     | StructNewDefault(_) -> todo
 
-    RefI31 ->
-      Ok(InstructionType(
-        finger_tree.new(),
-        finger_tree.from_list([RefTypeValType(I31RefType)]),
-      ))
+    RefI31 -> Ok(InstructionType([], [RefTypeValType(I31RefType)]))
     AnyConvertExtern ->
-      Ok(InstructionType(
-        finger_tree.from_list([RefTypeValType(ExternRefType)]),
-        finger_tree.from_list([RefTypeValType(AnyRefType)]),
-      ))
+      Ok(
+        InstructionType([RefTypeValType(ExternRefType)], [
+          RefTypeValType(AnyRefType),
+        ]),
+      )
     ExternConvertAny ->
-      Ok(InstructionType(
-        finger_tree.from_list([RefTypeValType(AnyRefType)]),
-        finger_tree.from_list([RefTypeValType(ExternRefType)]),
-      ))
+      Ok(
+        InstructionType([RefTypeValType(AnyRefType)], [
+          RefTypeValType(ExternRefType),
+        ]),
+      )
     I64Store(_) | I64Store16(_) | I64Store8(_) | I64Store32(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType, I64ValType]),
-        finger_tree.new(),
-      ))
+      Ok(InstructionType([I32ValType, I64ValType], []))
     I32Store(_) | I32Store16(_) | I32Store8(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType, I32ValType]),
-        finger_tree.new(),
-      ))
-    F64Store(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType, F64ValType]),
-        finger_tree.new(),
-      ))
-    F32Store(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType, F32ValType]),
-        finger_tree.new(),
-      ))
+      Ok(InstructionType([I32ValType, I32ValType], []))
+    F64Store(_) -> Ok(InstructionType([I32ValType, F64ValType], []))
+    F32Store(_) -> Ok(InstructionType([I32ValType, F32ValType], []))
     V128Store(_)
     | V128Store8Lane(_, _)
     | V128Store16Lane(_, _)
     | V128Store32Lane(_, _)
     | V128Store64Lane(_, _) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType, V128ValType]),
-        finger_tree.new(),
-      ))
+      Ok(InstructionType([I32ValType, V128ValType], []))
     V128Load8Lane(_, _)
     | V128Load16Lane(_, _)
     | V128Load32Lane(_, _)
     | V128Load64Lane(_, _) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType, V128ValType]),
-        finger_tree.from_list([V128ValType]),
-      ))
-    MemorySize ->
-      Ok(InstructionType(finger_tree.new(), finger_tree.from_list([I32ValType])))
+      Ok(InstructionType([I32ValType, V128ValType], [V128ValType]))
+    MemorySize -> Ok(InstructionType([], [I32ValType]))
     MemoryFill | MemoryCopy | MemoryInit(_) ->
-      Ok(InstructionType(
-        finger_tree.from_list([I32ValType, I32ValType, I32ValType]),
-        finger_tree.new(),
-      ))
-    DataDrop(_) -> Ok(InstructionType(finger_tree.new(), finger_tree.new()))
+      Ok(InstructionType([I32ValType, I32ValType, I32ValType], []))
+    DataDrop(_) -> Ok(InstructionType([], []))
   }
 }
 
 /// An expression is a "End" [0x0B] terminated sequence of instructions that describe a
 /// calculated value.
 pub type Expr {
-  Expr(insts: FingerTree(Instruction))
+  Expr(insts: List(Instruction))
 }
 
 /// Expanding a deftype extracts the "CompositeType" of the referenced subtype it points to.
 pub fn def_type_expand(dt: DefType) {
   let DefType(RecType(st), idx) = dt
-  use st <- result.map(st |> finger_tree.get(idx))
+  use st <- result.map(st |> list.drop(idx) |> list.first)
   st.ct
 }
 
@@ -1598,8 +1393,8 @@ pub type Global {
 /// used to initialize tables.
 /// Please see: https://webassembly.github.io/gc/core/syntax/modules.html#element-segments
 pub type Elem {
-  ElemFuncs(type_: RefType, init: FingerTree(FuncIDX), mode: ElemMode)
-  ElemExpressions(type_: RefType, init: FingerTree(Expr), mode: ElemMode)
+  ElemFuncs(type_: RefType, init: List(FuncIDX), mode: ElemMode)
+  ElemExpressions(type_: RefType, init: List(Expr), mode: ElemMode)
 }
 
 /// An element segment defines a sequence of expressions used to describe items that can be used in a
@@ -1633,7 +1428,7 @@ pub type Export {
 
 /// A WebAssembly function body defined by it's locals and an expression.
 pub type Code {
-  Code(locals: FingerTree(Locals), body: Expr)
+  Code(locals: List(Locals), body: Expr)
 }
 
 /// Data segments can be used to initialize a range of memory from a static vector of bytes.
