@@ -527,8 +527,6 @@ pub fn import_func(
           ),
         ),
       )
-
-    _, _ -> panic as "Invalid type index. Type Index must be absolute."
   }
 }
 
@@ -657,8 +655,6 @@ pub fn append_function_type_index(module: BinaryModule, type_: TypeIDX) {
         ..module,
         functions: Some(FunctionSection(list.append(functions, [type_]))),
       )
-
-    _, _ -> panic as "Invalid type index"
   }
 }
 

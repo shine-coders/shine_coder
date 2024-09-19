@@ -423,46 +423,6 @@ pub fn on_exit_type_idx(
   BinaryModuleVisitor(..visitor, on_exit_type_idx: Some(on_exit_type_idx))
 }
 
-pub fn on_enter_rec_type_idx(
-  visitor: BinaryModuleVisitor(ctx),
-  on_enter_rec_type_idx: VisitorCallback(ctx, TypeIDX),
-) {
-  BinaryModuleVisitor(
-    ..visitor,
-    on_enter_rec_type_idx: Some(on_enter_rec_type_idx),
-  )
-}
-
-pub fn on_exit_rec_type_idx(
-  visitor: BinaryModuleVisitor(ctx),
-  on_exit_rec_type_idx: VisitorCallback(ctx, TypeIDX),
-) {
-  BinaryModuleVisitor(
-    ..visitor,
-    on_exit_rec_type_idx: Some(on_exit_rec_type_idx),
-  )
-}
-
-pub fn on_enter_def_type_reference(
-  visitor: BinaryModuleVisitor(ctx),
-  on_enter_def_type_reference: VisitorCallback(ctx, TypeIDX),
-) {
-  BinaryModuleVisitor(
-    ..visitor,
-    on_enter_def_type_reference: Some(on_enter_def_type_reference),
-  )
-}
-
-pub fn on_exit_def_type_reference(
-  visitor: BinaryModuleVisitor(ctx),
-  on_exit_def_type_reference: VisitorCallback(ctx, TypeIDX),
-) {
-  BinaryModuleVisitor(
-    ..visitor,
-    on_exit_def_type_reference: Some(on_exit_def_type_reference),
-  )
-}
-
 pub fn on_enter_comp_type(
   visitor: BinaryModuleVisitor(ctx),
   on_enter_comp_type: VisitorCallback(ctx, CompositeType),

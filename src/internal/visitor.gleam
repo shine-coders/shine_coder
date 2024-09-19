@@ -24,32 +24,28 @@ import internal/structure/types.{
   ArrayNewData, ArrayNewDefault, ArrayNewElem, ArrayNewFixed, ArrayRefType,
   ArraySet, ArrayType, Block, Br, BrIf, BrOnCast, BrOnCastFail, BrOnNonNull,
   BrOnNull, BrTable, Call, CallIndirect, CallRef, Code, ConcreteHeapType,
-  DataDrop, DeclarativeElemMode, DefType, DefTypeReference, ElemDrop,
-  ElemExpressions, ElemFuncs, EqHeapType, EqRefType, Expr, ExternHeapType,
-  ExternRefType, F32ValType, F64ValType, FieldType, FuncCompositeType,
-  FuncExport, FuncHeapType, FuncImport, FuncRefType, FuncType, FuncTypeBlockType,
-  Global, GlobalExport, GlobalGet, GlobalImport, GlobalSet, GlobalType,
-  HeapTypeRefType, I16StorageType, I31HeapType, I31RefType, I32ValType,
-  I64ValType, I8StorageType, If, LabelIDX, Limits, LocalGet, LocalSet, LocalTee,
-  Locals, Loop, MemExport, MemIDX, MemImport, MemType, MemoryInit,
-  NoExternHeapType, NoExternRefType, NoFuncHeapType, NoFuncRefType, NoneHeapType,
-  NoneRefType, PassiveData, PassiveElemMode, RecType, RecTypeIDX, RefCast,
-  RefCastNullable, RefFunc, RefNull, RefTest, RefTestNullable, RefTypeValType,
-  ReturnCall, ReturnCallIndirect, ReturnCallRef, SelectT, StructCompositeType,
-  StructGet, StructGetS, StructGetU, StructHeapType, StructRefType, StructSet,
-  StructType, SubType, Table, TableCopy, TableExport, TableFill, TableGet,
-  TableGrow, TableImport, TableInit, TableSet, TableSize, TableType, TypeIDX,
-  V128ValType, ValTypeBlockType, ValTypeStorageType, VoidBlockType,
+  DataDrop, DeclarativeElemMode, DefType, ElemDrop, ElemExpressions, ElemFuncs,
+  EqHeapType, EqRefType, Expr, ExternHeapType, ExternRefType, F32ValType,
+  F64ValType, FieldType, FuncCompositeType, FuncExport, FuncHeapType, FuncImport,
+  FuncRefType, FuncType, FuncTypeBlockType, Global, GlobalExport, GlobalGet,
+  GlobalImport, GlobalSet, GlobalType, HeapTypeRefType, I16StorageType,
+  I31HeapType, I31RefType, I32ValType, I64ValType, I8StorageType, If, LabelIDX,
+  Limits, LocalGet, LocalSet, LocalTee, Locals, Loop, MemExport, MemIDX,
+  MemImport, MemType, MemoryInit, NoExternHeapType, NoExternRefType,
+  NoFuncHeapType, NoFuncRefType, NoneHeapType, NoneRefType, PassiveData,
+  PassiveElemMode, RecType, RefCast, RefCastNullable, RefFunc, RefNull, RefTest,
+  RefTestNullable, RefTypeValType, ReturnCall, ReturnCallIndirect, ReturnCallRef,
+  SelectT, StructCompositeType, StructGet, StructGetS, StructGetU,
+  StructHeapType, StructRefType, StructSet, StructType, SubType, Table,
+  TableCopy, TableExport, TableFill, TableGet, TableGrow, TableImport, TableInit,
+  TableSet, TableSize, TableType, TypeIDX, V128ValType, ValTypeBlockType,
+  ValTypeStorageType, VoidBlockType,
 }
 
 pub type VisitorCallback(ctx, element) =
   fn(ctx, element) -> Result(#(ctx, element), String)
 
 pub const empty_visitor = BinaryModuleVisitor(
-  None,
-  None,
-  None,
-  None,
   None,
   None,
   None,
@@ -424,10 +420,6 @@ pub type BinaryModuleVisitor(ctx) {
     on_exit_sub_type: Option(VisitorCallback(ctx, SubType)),
     on_enter_type_idx: Option(VisitorCallback(ctx, TypeIDX)),
     on_exit_type_idx: Option(VisitorCallback(ctx, TypeIDX)),
-    on_enter_rec_type_idx: Option(VisitorCallback(ctx, TypeIDX)),
-    on_exit_rec_type_idx: Option(VisitorCallback(ctx, TypeIDX)),
-    on_enter_def_type_reference: Option(VisitorCallback(ctx, TypeIDX)),
-    on_exit_def_type_reference: Option(VisitorCallback(ctx, TypeIDX)),
     on_enter_comp_type: Option(VisitorCallback(ctx, CompositeType)),
     on_exit_comp_type: Option(VisitorCallback(ctx, CompositeType)),
     on_enter_composite_type: Option(VisitorCallback(ctx, CompositeType)),
@@ -986,26 +978,7 @@ pub fn do_visit_type_idx(
     visitor.on_enter_type_idx,
     visitor.on_exit_type_idx,
   )
-
-  case type_idx {
-    TypeIDX(_) -> Ok(#(ctx, type_idx))
-    RecTypeIDX(_) ->
-      enter(
-        ctx,
-        type_idx,
-        visitor.on_enter_rec_type_idx,
-        visitor.on_exit_rec_type_idx,
-        Ok,
-      )
-    DefTypeReference(_) ->
-      enter(
-        ctx,
-        type_idx,
-        visitor.on_enter_def_type_reference,
-        visitor.on_exit_def_type_reference,
-        Ok,
-      )
-  }
+  Ok(#(ctx, type_idx))
 }
 
 pub fn do_visit_composite_type(

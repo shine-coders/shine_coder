@@ -93,14 +93,14 @@ pub type HeapType {
   StructHeapType
   ArrayHeapType
   NoneHeapType
-  ConcreteHeapType(idx: TypeIDX)
+  ConcreteHeapType(type_idx: TypeIDX)
   BotHeapType
 }
 
 /// A refrence type classifies a refrence by it's underlying type
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#reference-types
 pub type RefType {
-  HeapTypeRefType(ht: HeapType, null: Bool)
+  HeapTypeRefType(heap_type: HeapType, null: Bool)
   /// Shorthand for (ref null Any)
   AnyRefType
   /// Shorthand for (ref null Eq)
@@ -124,8 +124,8 @@ pub type RefType {
 }
 
 /// This function is used to check if a refrence type is nullable
-pub fn ref_type_is_nullable(rt: RefType) {
-  case rt {
+pub fn ref_type_is_nullable(ref_type: RefType) {
+  case ref_type {
     // If the ref type is a heap type, check the mutability
     HeapTypeRefType(_, mut) -> mut
     // Otherwise, all the shorthands are default nullable
@@ -134,9 +134,9 @@ pub fn ref_type_is_nullable(rt: RefType) {
 }
 
 /// This function is used to unwrap the heap type from a refrence type
-pub fn ref_type_unwrap_heap_type(rt: RefType) {
-  case rt {
-    HeapTypeRefType(ht, _) -> ht
+pub fn ref_type_unwrap_heap_type(ref_type: RefType) {
+  case ref_type {
+    HeapTypeRefType(heap_type, _) -> heap_type
     AnyRefType -> AnyHeapType
     EqRefType -> EqHeapType
     I31RefType -> I31HeapType
@@ -158,7 +158,7 @@ pub type ValType {
   I64ValType
   F32ValType
   F64ValType
-  RefTypeValType(rt: RefType)
+  RefTypeValType(ref_type: RefType)
   BotValType
 }
 
@@ -167,8 +167,8 @@ pub type ValType {
 /// Please see: https://webassembly.github.io/gc/core/binary/instructions.html#control-instructions
 pub type BlockType {
   VoidBlockType
-  ValTypeBlockType(vt: ValType)
-  FuncTypeBlockType(idx: TypeIDX)
+  ValTypeBlockType(val_type: ValType)
+  FuncTypeBlockType(type_idx: TypeIDX)
 }
 
 /// An instruction type is two result types, one for the parameters, and one for the results.
@@ -185,26 +185,26 @@ pub type FuncType {
 /// A struct type describes the shape of the fields of a given struct.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#aggregate-types
 pub type StructType {
-  StructType(ft: List(FieldType))
+  StructType(field_types: List(FieldType))
 }
 
 /// An array type describes an array with the given field type.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#aggregate-types
 pub type ArrayType {
-  ArrayType(ft: FieldType)
+  ArrayType(field_type: FieldType)
 }
 
 /// A field type is classified by a "StorageType" and a "Mutability" state.
 /// Please See: https://webassembly.github.io/gc/core/syntax/types.html#aggregate-types
 pub type FieldType {
-  FieldType(st: StorageType, mut: Mut)
+  FieldType(storage_type: StorageType, mutable: Mut)
 }
 
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#aggregate-types
 /// Please note that storage types can be PackedTypes, and they are a seperate type,
 /// however, they are merged with StorageType for convenience
 pub type StorageType {
-  ValTypeStorageType(vt: ValType)
+  ValTypeStorageType(val_type: ValType)
   // the values below are PackedTypes
   I8StorageType
   I16StorageType
@@ -219,9 +219,9 @@ pub type PackedType {
 /// This function is used to unwrap the packed type from a storage type, returning the
 /// smallest possible ValType associated with this storage type
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#aux-unpacktype
-pub fn unpack_storage_type(st: StorageType) -> ValType {
-  case st {
-    ValTypeStorageType(vt) -> vt
+pub fn unpack_storage_type(storage_type: StorageType) -> ValType {
+  case storage_type {
+    ValTypeStorageType(val_type) -> val_type
     _ -> I32ValType
   }
 }
@@ -230,9 +230,9 @@ pub fn unpack_storage_type(st: StorageType) -> ValType {
 /// a struct, or an array.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#composite-types
 pub type CompositeType {
-  FuncCompositeType(ft: FuncType)
-  StructCompositeType(st: StructType)
-  ArrayCompositeType(at: ArrayType)
+  FuncCompositeType(func_type: FuncType)
+  StructCompositeType(struct_type: StructType)
+  ArrayCompositeType(array_type: ArrayType)
 }
 
 /// A recursive type is a fundamental unit of type declaration in WebAssembly modules.
@@ -247,13 +247,10 @@ pub type RecType {
 pub type TypeIDX {
   // Module level type index
   TypeIDX(id: U32)
-  // An index into the parent recursive type subtypes
-  RecTypeIDX(id: U32)
-  // A substitution of the recursive type index with the actual DefType itself
-  DefTypeReference(dt: DefType)
 }
 
-/// An index into a struct's field list.
+/// A fundamental type in a WASM module that defines not only the shape of the type, but
+/// an index into a struct's field list.
 pub type FieldIDX {
   /// Module Field Index
   FieldIDX(id: U32)
@@ -285,6 +282,7 @@ pub type ElemIDX {
 
 /// An index into the module's memory section, and points to a given memory.
 pub type MemIDX {
+
   /// Module Mem Index
   MemIDX(id: U32)
 }
@@ -293,7 +291,7 @@ pub type MemIDX {
 /// also an array of matching subtype indexes that the type matches.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#recursive-types
 pub type SubType {
-  SubType(final: Bool, t: List(TypeIDX), ct: CompositeType)
+  SubType(final: Bool, type_idxs: List(TypeIDX), composite_type: CompositeType)
 }
 
 /// A definition of a limit range, which has a minimum, and an optional maximum which defaults
@@ -313,13 +311,13 @@ pub type MemType {
 /// how many items may exist in that table.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#table-types
 pub type TableType {
-  TableType(t: RefType, limits: Limits)
+  TableType(ref_type: RefType, limits: Limits)
 }
 
 /// A GlobalType describes a ValueType and a Mutability state of a given global.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#global-types
 pub type GlobalType {
-  GlobalType(vt: ValType, mut: Mut)
+  GlobalType(val_type: ValType, mutable: Mut)
 }
 
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#global-types
@@ -331,23 +329,23 @@ pub type Mut {
 /// An ExternType describes an a shape of some external refrence.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#external-types
 pub type ExternType {
-  FuncExternType(dt: DefType)
-  TableExternType(tt: TableType)
-  MemExternType(mt: MemType)
-  GlobalExternType(gt: GlobalType)
+  FuncExternType(def_type: DefType)
+  TableExternType(table_type: TableType)
+  MemExternType(mem_type: MemType)
+  GlobalExternType(global_type: GlobalType)
 }
 
 /// A deftype is a "wrapper", referred to as an "unrolled" recursive type that indexes into the
 /// given RecType's SubTypes. It is used for WebAssembly validation and execution.
 /// Please see: https://webassembly.github.io/gc/core/valid/conventions.html#defined-types
 pub type DefType {
-  DefType(rt: RecType, idx: Int)
+  DefType(rec_type: RecType, sub_type_idx: Int)
 }
 
 /// A local type is represented as a value type and wether or not it has been initialized.
 /// Please see: https://webassembly.github.io/gc/core/valid/conventions.html#local-types
 pub type LocalType {
-  LocalType(initialized: Bool, t: ValType)
+  LocalType(initialized: Bool, val_type: ValType)
 }
 
 /// An index into the data section, that points to a given data segment
@@ -754,26 +752,26 @@ pub type Instruction {
   RefTestNullable(rt: HeapType)
   RefCast(rt: HeapType)
   RefCastNullable(rt: HeapType)
-  StructNew(idx: TypeIDX)
-  StructNewDefault(idx: TypeIDX)
-  StructGet(tidx: TypeIDX, fidx: FieldIDX)
-  StructGetS(tidx: TypeIDX, fidx: FieldIDX)
-  StructGetU(tidx: TypeIDX, fidx: FieldIDX)
-  StructSet(tidx: TypeIDX, fidx: FieldIDX)
-  ArrayNew(idx: TypeIDX)
-  ArrayNewDefault(idx: TypeIDX)
-  ArrayNewData(idx: TypeIDX, data: DataIDX)
-  ArrayNewElem(idx: TypeIDX, elem: ElemIDX)
-  ArrayNewFixed(idx: TypeIDX, size: U32)
-  ArrayGet(idx: TypeIDX)
-  ArrayGetS(idx: TypeIDX)
-  ArrayGetU(idx: TypeIDX)
-  ArraySet(idx: TypeIDX)
+  StructNew(type_idx: TypeIDX)
+  StructNewDefault(type_idx: TypeIDX)
+  StructGet(type_idx: TypeIDX, field_idx: FieldIDX)
+  StructGetS(type_idx: TypeIDX, field_idx: FieldIDX)
+  StructGetU(type_idx: TypeIDX, field_idx: FieldIDX)
+  StructSet(type_idx: TypeIDX, field_idx: FieldIDX)
+  ArrayNew(type_idx: TypeIDX)
+  ArrayNewDefault(type_idx: TypeIDX)
+  ArrayNewData(type_idx: TypeIDX, elem_data: DataIDX)
+  ArrayNewElem(type_idx: TypeIDX, elem_idx: ElemIDX)
+  ArrayNewFixed(type_idx: TypeIDX, size: U32)
+  ArrayGet(type_idx: TypeIDX)
+  ArrayGetS(type_idx: TypeIDX)
+  ArrayGetU(type_idx: TypeIDX)
+  ArraySet(type_idx: TypeIDX)
   ArrayLen
-  ArrayFill(idx: TypeIDX)
+  ArrayFill(type_idx: TypeIDX)
   ArrayCopy(idx1: TypeIDX, idx2: TypeIDX)
-  ArrayInitData(idx: TypeIDX, data: DataIDX)
-  ArrayInitElem(idx: TypeIDX, elem: ElemIDX)
+  ArrayInitData(type_idx: TypeIDX, data_idx: DataIDX)
+  ArrayInitElem(type_idx: TypeIDX, elem_idx: ElemIDX)
   RefI31
   I31GetS
   I31GetU
@@ -793,7 +791,7 @@ pub type Instruction {
   TableGrow(idx: TableIDX)
   TableFill(idx: TableIDX)
   TableCopy(dest_idx: TableIDX, src_idx: TableIDX)
-  TableInit(elem: ElemIDX, idx: TableIDX)
+  TableInit(elem_idx: ElemIDX, table_idx: TableIDX)
   ElemDrop(idx: ElemIDX)
   I64Load(arg: MemArg)
   I32Load(arg: MemArg)
@@ -848,20 +846,20 @@ pub type Instruction {
   DataDrop(idx: DataIDX)
   Nop
   Unreachable
-  Block(bt: BlockType, instructions: Expr)
-  Loop(bt: BlockType, instructions: Expr)
+  Block(block_type: BlockType, instructions: Expr)
+  Loop(block_type: BlockType, instructions: Expr)
   If(
-    bt: BlockType,
+    block_type: BlockType,
     instructions: List(Instruction),
     else_instructions: Option(List(Instruction)),
   )
-  Br(label: LabelIDX)
-  BrIf(label: LabelIDX)
-  BrTable(labels: List(LabelIDX), default: LabelIDX)
-  BrOnNull(label: LabelIDX)
-  BrOnNonNull(label: LabelIDX)
-  BrOnCast(label: LabelIDX, rt1: RefType, rt2: RefType)
-  BrOnCastFail(label: LabelIDX, rt1: RefType, rt2: RefType)
+  Br(label_idx: LabelIDX)
+  BrIf(label_idx: LabelIDX)
+  BrTable(label_idxs: List(LabelIDX), default: LabelIDX)
+  BrOnNull(label_idx: LabelIDX)
+  BrOnNonNull(label_idx: LabelIDX)
+  BrOnCast(label_idx: LabelIDX, ref_type_1: RefType, ref_type_2: RefType)
+  BrOnCastFail(label_idx: LabelIDX, ref_type_1: RefType, ref_type_2: RefType)
   Return
   Call(func_idx: FuncIDX)
   CallRef(type_idx: TypeIDX)
@@ -1344,9 +1342,9 @@ pub type Expr {
 
 /// Expanding a deftype extracts the "CompositeType" of the referenced subtype it points to.
 pub fn def_type_expand(dt: DefType) {
-  let DefType(RecType(st), idx) = dt
-  use st <- result.map(st |> list.drop(idx) |> list.first)
-  st.ct
+  let DefType(RecType(sub_type), idx) = dt
+  use st <- result.map(sub_type |> list.drop(idx) |> list.first)
+  st.composite_type
 }
 
 /// An import describes a function, table, memory, or global that is given to the
@@ -1451,10 +1449,8 @@ pub fn unwrap_local_idx(idx: LocalIDX) {
 /// Return the integer value of a type index if it's a concrete index.
 ///
 /// Panics if the index is a RecTypeIDX or a DefType
-pub fn unwrap_type_idx(idx: TypeIDX) {
-  case idx {
+pub fn unwrap_type_idx(type_idx: TypeIDX) {
+  case type_idx {
     TypeIDX(idx) -> idx |> numbers.unwrap_u32
-    _ ->
-      panic as "Concrete and replaced types cannot be unwrapped. Something went wrong."
   }
 }

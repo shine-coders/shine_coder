@@ -272,7 +272,7 @@ pub fn decode_struct_type_test() {
   <<6, 0x7F, 0x00, 0x78, 0x00, 0x77, 0x00, 0x7F, 0x01, 0x78, 0x01, 0x77, 0x01>>
   |> types.decode_struct_type
   |> should.be_ok
-  |> pair.map_first(fn(e) { e.ft })
+  |> pair.map_first(fn(e) { e.field_types })
   |> should.equal(
     #(
       [
@@ -450,8 +450,8 @@ fn do_func_idxs_equal(
 
 fn sub_type_equals(a: structure_types.SubType, b: structure_types.SubType) {
   a.final |> should.equal(b.final)
-  do_type_idxs_equal(a.t, b.t)
-  composite_type_equals(a.ct, b.ct)
+  do_type_idxs_equal(a.type_idxs, b.type_idxs)
+  composite_type_equals(a.composite_type, b.composite_type)
 }
 
 fn rec_type_equals(a: structure_types.RecType, b: structure_types.RecType) {
@@ -831,7 +831,7 @@ fn ref_type_equals(a: structure_types.RefType, b: structure_types.RefType) {
 }
 
 fn table_type_equals(a: structure_types.TableType, b: structure_types.TableType) {
-  a.t |> ref_type_equals(b.t)
+  a.ref_type |> ref_type_equals(b.ref_type)
   a.limits |> should.equal(b.limits)
 }
 
@@ -992,8 +992,8 @@ fn global_types_equals(
   a: structure_types.GlobalType,
   b: structure_types.GlobalType,
 ) {
-  a.vt |> should.equal(b.vt)
-  a.mut |> should.equal(b.mut)
+  a.val_type |> should.equal(b.val_type)
+  a.mutable |> should.equal(b.mutable)
 }
 
 fn globals_equals(a: structure_types.Global, b: structure_types.Global) {

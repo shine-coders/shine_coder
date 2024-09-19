@@ -1,6 +1,5 @@
 import gleam/list
-import gleam/option.{type Option, None, Some}
-import internal/structure/modules
+import gleam/option.{None, Some}
 import internal/structure/numbers
 import internal/structure/types.{
   type DefType, type ExternType, type Global, type GlobalType, type Limits,
@@ -15,11 +14,11 @@ const limits_2_16 = 65_536
 const limits_2_32_minus_1 = 4_294_967_295
 
 pub fn expand(_: Context, def_type: DefType) {
-  let sub_types = def_type.rt.sub_types
-  let index = def_type.idx
+  let sub_types = def_type.rec_type.sub_types
+  let index = def_type.sub_type_idx
   case list.drop(sub_types, index) {
     [] -> Error("Invalid DefType: RecType index out of bounds.")
-    [sub_type, ..] -> Ok(sub_type.ct)
+    [sub_type, ..] -> Ok(sub_type.composite_type)
   }
 }
 
@@ -53,7 +52,7 @@ pub fn global_is_valid(ctx: Context, global: Global) {
 }
 
 pub fn global_type_is_valid(ctx: Context, global_type: GlobalType) {
-  val_type_is_valid(ctx, global_type.vt)
+  val_type_is_valid(ctx, global_type.val_type)
 }
 
 pub fn val_type_is_valid(ctx: Context, val_type: ValType) {
@@ -83,7 +82,7 @@ pub fn table_is_valid(ctx: Context, table: Table) {
 }
 
 pub fn table_type_is_valid(ctx: Context, table_type: TableType) {
-  ref_type_is_valid(ctx, table_type.t)
+  ref_type_is_valid(ctx, table_type.ref_type)
   && limits_is_valid(ctx, table_type.limits, limits_2_32_minus_1)
 }
 

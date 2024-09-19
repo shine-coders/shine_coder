@@ -1,39 +1,25 @@
-import gleam/option.{type Option, None}
+import gleam/dict.{type Dict}
+import gleam/list
+import internal/structure/numbers.{type U32}
 import internal/structure/types.{
   type Data, type DefType, type Elem, type FuncIDX, type GlobalType, type Locals,
   type MemType, type RecType, type TableType, type ValType,
 }
 
 pub type Context {
-  Context(
-    types: List(DefType),
-    funcs: List(DefType),
-    tables: List(TableType),
-    mems: List(MemType),
-    globals: List(GlobalType),
-    elems: List(Elem),
-    data: List(Data),
-    locals: List(Locals),
-    labels: List(List(ValType)),
-    return: Option(List(ValType)),
-    refs: List(FuncIDX),
-  )
+  Context(types: List(DefType))
 }
 
-pub const empty_context = Context(
-  types: [],
-  funcs: [],
-  tables: [],
-  mems: [],
-  globals: [],
-  elems: [],
-  data: [],
-  locals: [],
-  labels: [],
-  return: None,
-  refs: [],
-)
+pub const empty_context = Context(types: [])
 
-pub fn roll_rec_types(rec_type: RecType) -> List(DefType) {
+pub fn get_def_type(ctx: Context, idx: U32) {
+  let idx = numbers.unwrap_u32(idx)
+  case list.drop(ctx.types, idx) {
+    [def_type, ..] -> Ok(def_type)
+    _ -> Error("Invalid TypeIDX")
+  }
+}
+
+pub fn roll_rec_type(ctx: Context, rec_type: RecType) {
   todo
 }

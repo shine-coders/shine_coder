@@ -413,7 +413,7 @@ pub fn decode_array_type(bits: BitArray) {
 
 /// Decoding an array type is the same as decoding a field type.
 pub fn encode_array_type(builder: BytesBuilder, array_type: ArrayType) {
-  builder |> encode_field_type(array_type.ft)
+  builder |> encode_field_type(array_type.field_type)
 }
 
 /// Decoding a field type follows the following byte pattern:
@@ -431,8 +431,10 @@ pub fn decode_field_type(bits: BitArray) {
 /// 1. Encode a storage type
 /// 2. Encode a mutability flag
 pub fn encode_field_type(builder: BytesBuilder, field_type: FieldType) {
-  use builder <- result.try(builder |> encode_storage_type(field_type.st))
-  builder |> encode_mut(field_type.mut)
+  use builder <- result.try(
+    builder |> encode_storage_type(field_type.storage_type),
+  )
+  builder |> encode_mut(field_type.mutable)
 }
 
 /// Decoding a storage type follows the one of following byte pattern:
@@ -497,7 +499,7 @@ pub fn decode_struct_type(bits: BitArray) {
 /// Encoding a struct type is the same as encoding a vector of field types.
 ///  These field types describe the shape of the struct, and are 0-based indexed.
 pub fn encode_struct_type(builder: BytesBuilder, struct_type: StructType) {
-  builder |> common.encode_vec(struct_type.ft, encode_field_type)
+  builder |> common.encode_vec(struct_type.field_types, encode_field_type)
 }
 
 /// Decoding a composite type uses one of the following byte patterns:
@@ -611,15 +613,15 @@ pub fn decode_sub_type(bits: BitArray) {
 ///    and a single composite type.
 /// 3. A single composite type that is *FINAL*
 pub fn encode_sub_type(builder: BytesBuilder, sub_type: SubType) {
-  case sub_type.final, sub_type.t {
-    True, [] -> builder |> encode_composite_type(sub_type.ct)
+  case sub_type.final, sub_type.type_idxs {
+    True, [] -> builder |> encode_composite_type(sub_type.composite_type)
     True, match_idxs -> {
       use builder <- result.try(
         builder
         |> bytes_builder.append(<<0x4F>>)
         |> common.encode_vec(match_idxs, encode_type_idx),
       )
-      builder |> encode_composite_type(sub_type.ct)
+      builder |> encode_composite_type(sub_type.composite_type)
     }
     False, match_idxs -> {
       use builder <- result.try(
@@ -627,7 +629,7 @@ pub fn encode_sub_type(builder: BytesBuilder, sub_type: SubType) {
         |> bytes_builder.append(<<0x50>>)
         |> common.encode_vec(match_idxs, encode_type_idx),
       )
-      builder |> encode_composite_type(sub_type.ct)
+      builder |> encode_composite_type(sub_type.composite_type)
     }
   }
 }
@@ -679,10 +681,8 @@ pub fn decode_type_idx(bits: BitArray) {
 /// Note: Despite the fact that type indices are replacable by RecTypeIDXs and DefTypes,
 /// these forms are impossible when used in a binary format.
 pub fn encode_type_idx(builder: BytesBuilder, type_idx: TypeIDX) {
-  case type_idx {
-    TypeIDX(id) -> Ok(builder |> encode_u32(id))
-    _ -> Error("Invalid type index, found concrete index instead of numeric.")
-  }
+  let TypeIDX(type_idx) = type_idx
+  Ok(builder |> encode_u32(type_idx))
 }
 
 /// Decoding a MemIDX is the same as decoding a u32
@@ -816,7 +816,7 @@ pub fn decode_table_type(rest: BitArray) {
 ///
 /// TableType -> [ref_type: RefType] [limits: Limits]
 pub fn encode_table_type(builder: BytesBuilder, table_type: TableType) {
-  use builder <- result.try(builder |> encode_ref_type(table_type.t))
+  use builder <- result.try(builder |> encode_ref_type(table_type.ref_type))
   builder |> encode_limits(table_type.limits)
 }
 
@@ -833,8 +833,8 @@ pub fn decode_global_type(rest: BitArray) {
 ///
 /// GlobalType -> [val_type: ValType] [mutability: Mutability]
 pub fn encode_global_type(builder: BytesBuilder, global_type: GlobalType) {
-  use builder <- result.try(builder |> encode_val_type(global_type.vt))
-  builder |> encode_mut(global_type.mut)
+  use builder <- result.try(builder |> encode_val_type(global_type.val_type))
+  builder |> encode_mut(global_type.mutable)
 }
 
 /// Block types are encoded into three possible formats:
@@ -877,8 +877,6 @@ pub fn encode_block_type(builder: BytesBuilder, block_type: BlockType) {
       use s33_value <- result.map(type_idx |> unwrap_u32 |> s33)
       builder |> encode_s33(s33_value)
     }
-    _ ->
-      panic as "Concrete block types cannot be encoded. Something went wrong."
   }
 }
 

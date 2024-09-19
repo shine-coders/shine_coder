@@ -186,10 +186,12 @@ pub fn f64_load(mem_builder: MemBuilder, ptr: Int) -> Result(F64, String) {
   }
 }
 
-// V128Load
 pub fn v128_load(mem_builder: MemBuilder, ptr: Int) -> Result(V128Value, String) {
   result.try(read_bytes(mem_builder, ptr, 16), v128)
 }
+
+// The following instructions will need to be supported for memory reading and writing ops
+//
 // I64Load16S
 // I64Load16U
 // I64Load8S
@@ -247,7 +249,6 @@ pub fn v128_load(mem_builder: MemBuilder, ptr: Int) -> Result(V128Value, String)
 // V128Load16Lane
 // V128Load32Lane
 // V128Load64Lane
-
 // I64Store
 // I64Store8
 // I64Store16
@@ -275,4 +276,5 @@ pub fn v128_load(mem_builder: MemBuilder, ptr: Int) -> Result(V128Value, String)
 // V128Store8Lane
 // V128Store16Lane
 // V128Store32Lane
+// V128Store64Lane
 // V128Store64Lane
