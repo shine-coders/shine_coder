@@ -1,17 +1,19 @@
+import gleam/list.{Continue, Stop}
+import gleamy/red_black_tree_map as map
+import internal/structure/numbers
 import internal/structure/types.{
   type ArrayType, type CompositeType, type DefType, type FieldType,
   type FuncType, type HeapType, type RefType, type StorageType, type StructType,
-  type ValType, AnyHeapType, AnyRefType, ArrayCompositeType, ArrayHeapType,
-  ArrayRefType, ArrayType, BotHeapType, BotValType, ConcreteHeapType, Const,
-  EqHeapType, EqRefType, ExternHeapType, ExternRefType, FieldType,
-  FuncCompositeType, FuncHeapType, FuncRefType, FuncType, HeapTypeRefType,
-  I31HeapType, I31RefType, NoExternHeapType, NoExternRefType, NoFuncHeapType,
-  NoFuncRefType, NoneHeapType, NoneRefType, RefTypeValType, StructCompositeType,
-  StructHeapType, StructRefType, StructType, SubType, TypeIDX,
-  ValTypeStorageType, Var,
+  type TypeIDX, type ValType, AnyHeapType, AnyRefType, ArrayCompositeType,
+  ArrayHeapType, ArrayRefType, ArrayType, BotHeapType, BotValType,
+  ConcreteHeapType, Const, EqHeapType, EqRefType, ExternHeapType, ExternRefType,
+  FieldType, FuncCompositeType, FuncHeapType, FuncRefType, FuncType,
+  HeapTypeRefType, I31HeapType, I31RefType, NoExternHeapType, NoExternRefType,
+  NoFuncHeapType, NoFuncRefType, NoneHeapType, NoneRefType, RefTypeValType,
+  StructCompositeType, StructHeapType, StructRefType, StructType, SubType,
+  TypeIDX, ValTypeStorageType, Var,
 }
-
-import internal/validation/common.{type Context}
+import internal/validation/common.{type Context, TypeEntry}
 
 pub fn matches_val_type(ctx: Context, val_type_1: ValType, val_type_2: ValType) {
   case val_type_1, val_type_2 {
@@ -55,57 +57,83 @@ pub fn matches_heap_type(
   heap_type_2: HeapType,
 ) {
   case heap_type_1, heap_type_2 {
+    // Either both heaptype1 and heaptype2 are the same.
     heap_type_1, heap_type_2 if heap_type_1 == heap_type_2 -> True
+    ConcreteHeapType(type_idx_1), ConcreteHeapType(type_idx_2) ->
+      match_heap_type_idxs(ctx, type_idx_1, type_idx_2)
+    ConcreteHeapType(type_idx), heap_type_2 ->
+      match_type_idx_to_heap_type(ctx, type_idx, heap_type_2)
+    heap_type_1, ConcreteHeapType(type_idx) ->
+      match_heap_type_to_type_idx(ctx, heap_type_1, type_idx)
+
+    // Or heaptype1 is bot.
     BotHeapType, _
-    | EqHeapType, AnyHeapType
-    | I31HeapType, EqHeapType
+    | // Or heaptype1 is eq and heaptype2 is any
+      EqHeapType,
+      AnyHeapType
+    | // Or heaptype1 is one of i31, struct, or array and heaptype2 is eq.
+      I31HeapType,
+      EqHeapType
     | StructHeapType, EqHeapType
     | ArrayHeapType, EqHeapType
     -> True
-
-    // TODO: Fix how type indices are matched
-    // ConcreteHeapType(DefTypeReference(def_type_1)),
-    //   ConcreteHeapType(DefTypeReference(def_type_2))
-    // -> matches_def_type(ctx, def_type_1, def_type_2)
-    // ConcreteHeapType(DefTypeReference(def_type)), heap_type_2 -> {
-    //   case types.def_type_expand(def_type), heap_type_2 {
-    //     Ok(FuncCompositeType(_)), FuncHeapType
-    //     | Ok(StructCompositeType(_)), StructHeapType
-    //     | Ok(ArrayCompositeType(_)), ArrayHeapType
-    //     -> True
-    //     _, _ -> False
-    //   }
-    // }
-    // ConcreteHeapType(TypeIDX(idx)), heap_type_2 ->
-    //   case common.get_def_type(ctx, idx) {
-    //     Ok(def_type) ->
-    //       matches_heap_type(
-    //         ctx,
-    //         ConcreteHeapType(DefTypeReference(def_type)),
-    //         heap_type_2,
-    //       )
-    //     _ -> False
-    //   }
-    // heap_type_1, ConcreteHeapType(TypeIDX(idx)) ->
-    //   case common.get_def_type(ctx, idx) {
-    //     Ok(def_type) ->
-    //       matches_heap_type(
-    //         ctx,
-    //         heap_type_1,
-    //         ConcreteHeapType(DefTypeReference(def_type)),
-    //       )
-    //     _ -> False
-    //   }
     NoneHeapType, heap_type_2 ->
       matches_heap_type(ctx, heap_type_2, AnyHeapType)
+
+    // Or heaptype1 is nofunc and heaptype2 matches func.
     NoFuncHeapType, heap_type_2 ->
       matches_heap_type(ctx, heap_type_2, FuncHeapType)
+
+    // Or heaptype1 is noextern and heaptype2 matches extern.
     NoExternHeapType, heap_type_2 ->
       matches_heap_type(ctx, heap_type_2, ExternHeapType)
 
     // TODO: if heap_type_1 matches heap_type_prime and heap_type_prime matches
     //    heap_type_2
     _, _ -> False
+  }
+}
+
+fn match_type_idx_to_heap_type(
+  ctx: Context,
+  type_idx: TypeIDX,
+  heap_type: HeapType,
+) {
+  case ctx.types |> map.find(type_idx) {
+    Ok(TypeEntry(_, _, _, SubType(_, _, composite_type), _)) ->
+      case composite_type, heap_type {
+        FuncCompositeType(_), FuncHeapType
+        | ArrayCompositeType(_), ArrayHeapType
+        | StructCompositeType(_), StructHeapType
+        -> True
+        _, _ -> False
+      }
+    _ -> False
+  }
+}
+
+// TODO: How to compare heap types to def_types
+fn match_heap_type_to_type_idx(
+  ctx: Context,
+  heap_type: HeapType,
+  type_idx: TypeIDX,
+) {
+  case map.find(ctx.types, type_idx) {
+    Ok(TypeEntry(_, _, _, SubType(_, _, _composite_type), _)) -> False
+    _ -> False
+  }
+}
+
+fn match_heap_type_idxs(ctx: Context, type_idx_1: TypeIDX, type_idx_2: TypeIDX) {
+  // Or there exists a valid heap type heaptype', such that heaptype1 matches heaptype' and heaptype' matches
+  // heaptype2.
+  case map.find(ctx.types, type_idx_1) {
+    Ok(TypeEntry(_, _, _, SubType(_, match_idxs, _), _)) -> {
+      use type_idx_1 <- list.any(match_idxs)
+      match_heap_type_idxs(ctx, type_idx_1, type_idx_2)
+    }
+
+    _ -> False
   }
 }
 

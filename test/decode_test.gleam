@@ -450,7 +450,7 @@ fn do_func_idxs_equal(
 
 fn sub_type_equals(a: structure_types.SubType, b: structure_types.SubType) {
   a.final |> should.equal(b.final)
-  do_type_idxs_equal(a.type_idxs, b.type_idxs)
+  do_type_idxs_equal(a.match_idxs, b.match_idxs)
   composite_type_equals(a.composite_type, b.composite_type)
 }
 

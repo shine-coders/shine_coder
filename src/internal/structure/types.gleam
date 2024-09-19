@@ -7,75 +7,75 @@ import internal/structure/numbers.{
 }
 
 /// Get the lane_16 indx nvalue as an integer
-pub fn unwrap_lane_16(val: LaneIDX16) {
-  val.val
+pub fn unwrap_lane_16(lane_idx: LaneIDX16) {
+  lane_idx.lane
 }
 
 /// Create a lane index that indexes 16 lanes
-pub fn lane_16(val: Int) {
-  case val |> between(#(0, 15)) {
-    True -> Ok(LaneIDX16(val))
+pub fn lane_16(lane: Int) {
+  case lane |> between(#(0, 15)) {
+    True -> Ok(LaneIDX16(lane))
     _ -> Error("Lane index out of range")
   }
 }
 
 /// This type is used to describe lane indexes with a range of [0, 15]
 pub opaque type LaneIDX16 {
-  LaneIDX16(val: Int)
+  LaneIDX16(lane: Int)
 }
 
 /// Get the lane_2 index value as an integer
-pub fn unwrap_lane_2(val: LaneIDX2) {
-  val.val
+pub fn unwrap_lane_2(lane_idx: LaneIDX2) {
+  lane_idx.lane
 }
 
 /// Create a lane index that indexes 2 lanes
-pub fn lane_2(val: Int) {
-  case val |> between(#(0, 1)) {
-    True -> Ok(LaneIDX2(val))
+pub fn lane_2(lane: Int) {
+  case lane |> between(#(0, 1)) {
+    True -> Ok(LaneIDX2(lane))
     _ -> Error("Lane index out of range")
   }
 }
 
 /// This type is used to describe lane indexes with a range of [0, 1]
 pub opaque type LaneIDX2 {
-  LaneIDX2(val: Int)
+  LaneIDX2(lane: Int)
 }
 
 /// Get the lane_4 index value as an integer
-pub fn unwrap_lane_4(val: LaneIDX4) {
-  val.val
+pub fn unwrap_lane_4(lane_idx: LaneIDX4) {
+  lane_idx.lane
 }
 
 /// Create a lane index that indexes 4 lanes
-pub fn lane_4(val: Int) {
-  case val |> between(#(0, 3)) {
-    True -> Ok(LaneIDX4(val))
+pub fn lane_4(lane: Int) {
+  case lane |> between(#(0, 3)) {
+    True -> Ok(LaneIDX4(lane))
     _ -> Error("Lane index out of range")
   }
 }
 
 /// This type is used to describe lane indexes with a range of [0, 3]
 pub opaque type LaneIDX4 {
-  LaneIDX4(val: Int)
+  LaneIDX4(lane: Int)
 }
 
 /// Get the lane_8 index value as an integer
-pub fn unwrap_lane_8(val: LaneIDX8) {
-  val.val
+pub fn unwrap_lane_8(lane_idx: LaneIDX8) {
+  lane_idx.lane
 }
 
 /// Create a lane index that indexes 8 lanes
-pub fn lane_8(val: Int) {
-  case val |> between(#(0, 7)) {
-    True -> Ok(LaneIDX8(val))
+pub fn lane_8(lane: Int) {
+  case lane |> between(#(0, 7)) {
+    True -> Ok(LaneIDX8(lane))
     _ -> Error("Lane index out of range")
   }
 }
 
 /// This type is used to describe lane indexes with a range of [0, 7]
 pub opaque type LaneIDX8 {
-  LaneIDX8(val: Int)
+  LaneIDX8(lane: Int)
 }
 
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#heap-types
@@ -291,7 +291,7 @@ pub type MemIDX {
 /// also an array of matching subtype indexes that the type matches.
 /// Please see: https://webassembly.github.io/gc/core/syntax/types.html#recursive-types
 pub type SubType {
-  SubType(final: Bool, type_idxs: List(TypeIDX), composite_type: CompositeType)
+  SubType(final: Bool, match_idxs: List(TypeIDX), composite_type: CompositeType)
 }
 
 /// A definition of a limit range, which has a minimum, and an optional maximum which defaults

@@ -613,7 +613,7 @@ pub fn decode_sub_type(bits: BitArray) {
 ///    and a single composite type.
 /// 3. A single composite type that is *FINAL*
 pub fn encode_sub_type(builder: BytesBuilder, sub_type: SubType) {
-  case sub_type.final, sub_type.type_idxs {
+  case sub_type.final, sub_type.match_idxs {
     True, [] -> builder |> encode_composite_type(sub_type.composite_type)
     True, match_idxs -> {
       use builder <- result.try(
