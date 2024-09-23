@@ -189,7 +189,6 @@ pub fn f64_load(mem_builder: MemBuilder, ptr: Int) -> Result(F64, String) {
 pub fn v128_load(mem_builder: MemBuilder, ptr: Int) -> Result(V128Value, String) {
   result.try(read_bytes(mem_builder, ptr, 16), v128)
 }
-
 // The following instructions will need to be supported for memory reading and writing ops
 //
 // I64Load16S
