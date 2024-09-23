@@ -1,5 +1,6 @@
 import gleam/bytes_builder.{type BytesBuilder}
 import gleam/int
+import gleam/list
 import gleam/option.{None, Some}
 import gleam/result
 import internal/binary/common
@@ -7,7 +8,6 @@ import internal/binary/values.{
   decode_i32, decode_i64, decode_s33, decode_u32, encode_i32, encode_i64,
   encode_s33, encode_u32,
 }
-import internal/finger_tree.{type FingerTree}
 import internal/structure/numbers.{
   decode_f32, decode_f64, encode_f32, encode_f64, s33, u32, unwrap_s33,
   unwrap_u32,
@@ -341,7 +341,7 @@ pub fn encode_ref_type(builder: BytesBuilder, ref_type: RefType) {
 }
 
 /// Decodes a ValType from the given bits.
-/// 
+///
 /// A valtype may be:
 /// 1. an I32
 /// 2. an I64
@@ -377,10 +377,7 @@ pub fn encode_val_type(builder: BytesBuilder, val_type: ValType) {
 }
 
 /// Encoding a result type is the same as encoding a vector of ValTypes
-pub fn encode_result_type(
-  builder: BytesBuilder,
-  result_type: FingerTree(ValType),
-) {
+pub fn encode_result_type(builder: BytesBuilder, result_type: List(ValType)) {
   builder |> common.encode_vec(result_type, encode_val_type)
 }
 
@@ -416,11 +413,11 @@ pub fn decode_array_type(bits: BitArray) {
 
 /// Decoding an array type is the same as decoding a field type.
 pub fn encode_array_type(builder: BytesBuilder, array_type: ArrayType) {
-  builder |> encode_field_type(array_type.ft)
+  builder |> encode_field_type(array_type.field_type)
 }
 
 /// Decoding a field type follows the following byte pattern:
-/// 
+///
 /// 1. Decode a storage type
 /// 2. Decode a mutability flag
 pub fn decode_field_type(bits: BitArray) {
@@ -434,12 +431,14 @@ pub fn decode_field_type(bits: BitArray) {
 /// 1. Encode a storage type
 /// 2. Encode a mutability flag
 pub fn encode_field_type(builder: BytesBuilder, field_type: FieldType) {
-  use builder <- result.try(builder |> encode_storage_type(field_type.st))
-  builder |> encode_mut(field_type.mut)
+  use builder <- result.try(
+    builder |> encode_storage_type(field_type.storage_type),
+  )
+  builder |> encode_mut(field_type.mutable)
 }
 
 /// Decoding a storage type follows the one of following byte pattern:
-/// 
+///
 /// 1. [0x78] - This represents a packed type I8
 /// 2. [0x77] - This represents a packed type I16
 /// 3. Any other value - This represents a ValType
@@ -455,7 +454,7 @@ pub fn decode_storage_type(bits: BitArray) {
 }
 
 /// Encoding a storage type follows the one of following byte pattern:
-/// 
+///
 /// 1. [0x78] - This represents a packed type I8
 /// 2. [0x77] - This represents a packed type I16
 /// 3. Any other value - This represents a ValType
@@ -468,7 +467,7 @@ pub fn encode_storage_type(builder: BytesBuilder, storage_type: StorageType) {
 }
 
 /// Decoding a mutability flag follows the following byte pattern:
-/// 
+///
 /// 1. [0x00] - This represents a const
 /// 2. [0x01] - This represents a var
 pub fn decode_mut(bits: BitArray) {
@@ -480,7 +479,7 @@ pub fn decode_mut(bits: BitArray) {
 }
 
 /// Encoding a mutability flag follows the following byte pattern:
-/// 
+///
 /// 1. [0x00] - This represents a const
 /// 2. [0x01] - This represents a var
 pub fn encode_mut(builder: BytesBuilder, mut: Mut) {
@@ -500,11 +499,11 @@ pub fn decode_struct_type(bits: BitArray) {
 /// Encoding a struct type is the same as encoding a vector of field types.
 ///  These field types describe the shape of the struct, and are 0-based indexed.
 pub fn encode_struct_type(builder: BytesBuilder, struct_type: StructType) {
-  builder |> common.encode_vec(struct_type.ft, encode_field_type)
+  builder |> common.encode_vec(struct_type.field_types, encode_field_type)
 }
 
 /// Decoding a composite type uses one of the following byte patterns:
-/// 
+///
 /// 1. [0x5E]  - This represents an array type followed by a single field type
 /// 2. [0x5F]  - This represents a struct type followed by a vector of field types
 /// 3. [0x60]  - This represents a function type followed by a function type
@@ -527,7 +526,7 @@ pub fn decode_comp_type(bits: BitArray) {
 }
 
 /// Encoding a composite type uses one of the following byte patterns:
-/// 
+///
 /// 1. [0x5E]  - This represents an array type followed by a single field type
 /// 2. [0x5F]  - This represents a struct type followed by a vector of field types
 /// 3. [0x60]  - This represents a function type followed by a function type
@@ -549,7 +548,7 @@ pub fn encode_composite_type(builder: BytesBuilder, comp_type: CompositeType) {
 }
 
 /// Decoding a recursive type uses one of the following byte patterns:
-/// 
+///
 /// 1. [0x4E]  - This represents a vector of sub types that are iso-recursive
 /// 2. A single subtype wrapped inside of a rectype group
 pub fn decode_rec_type(bits: BitArray) {
@@ -560,32 +559,28 @@ pub fn decode_rec_type(bits: BitArray) {
     }
     _ -> {
       use #(st, rest) <- result.map(decode_sub_type(bits))
-      #(RecType(finger_tree.from_list([st])), rest)
+      #(RecType([st]), rest)
     }
   }
 }
 
 /// Encoding a recursive type uses one of the following byte patterns:
-/// 
+///
 /// 1. [0x4E]  - This represents a vector of sub types that are iso-recursive
 /// 2. A single subtype wrapped inside of a rectype group
 pub fn encode_rec_type(builder: BytesBuilder, rec_type: RecType) {
-  case rec_type.sub_types |> finger_tree.size {
-    1 ->
-      case rec_type.sub_types |> finger_tree.shift {
-        Ok(#(sub_type, _)) -> encode_sub_type(builder, sub_type)
-        Error(_) -> Error("Invalid recursive type")
-      }
-    t if t > 1 ->
+  case rec_type.sub_types {
+    [sub_type] -> encode_sub_type(builder, sub_type)
+    [] -> Error("Invalid recursive type")
+    sub_types ->
       builder
       |> bytes_builder.append(<<0x4E>>)
-      |> common.encode_vec(rec_type.sub_types, encode_sub_type)
-    _ -> Error("Invalid recursive type")
+      |> common.encode_vec(sub_types, encode_sub_type)
   }
 }
 
 /// Decoding a subtype uses one of the following byte patterns:
-/// 
+///
 /// 1. [0x50]  - This represents a subtype, followed by a vector of type indexes,
 ///    and a single composite type.
 /// 2. [0x4F]  - This represents a *FINAL* subtype, followed by a vector of type indexes,
@@ -605,36 +600,36 @@ pub fn decode_sub_type(bits: BitArray) {
     }
     _ -> {
       use #(ct, rest) <- result.map(decode_comp_type(bits))
-      #(SubType(True, finger_tree.new(), ct), rest)
+      #(SubType(True, [], ct), rest)
     }
   }
 }
 
 /// Encoding a subtype uses one of the following byte patterns:
-/// 
+///
 /// 1. [0x50]  - This represents a subtype, followed by a vector of type indexes,
 ///    and a single composite type.
 /// 2. [0x4F]  - This represents a *FINAL* subtype, followed by a vector of type indexes,
 ///    and a single composite type.
 /// 3. A single composite type that is *FINAL*
 pub fn encode_sub_type(builder: BytesBuilder, sub_type: SubType) {
-  case sub_type.final, sub_type.t |> finger_tree.size {
-    True, 0 -> builder |> encode_composite_type(sub_type.ct)
-    True, _ -> {
+  case sub_type.final, sub_type.match_idxs {
+    True, [] -> builder |> encode_composite_type(sub_type.composite_type)
+    True, match_idxs -> {
       use builder <- result.try(
         builder
         |> bytes_builder.append(<<0x4F>>)
-        |> common.encode_vec(sub_type.t, encode_type_idx),
+        |> common.encode_vec(match_idxs, encode_type_idx),
       )
-      builder |> encode_composite_type(sub_type.ct)
+      builder |> encode_composite_type(sub_type.composite_type)
     }
-    False, _ -> {
+    False, match_idxs -> {
       use builder <- result.try(
         builder
         |> bytes_builder.append(<<0x50>>)
-        |> common.encode_vec(sub_type.t, encode_type_idx),
+        |> common.encode_vec(match_idxs, encode_type_idx),
       )
-      builder |> encode_composite_type(sub_type.ct)
+      builder |> encode_composite_type(sub_type.composite_type)
     }
   }
 }
@@ -673,7 +668,7 @@ pub fn encode_field_idx(builder: BytesBuilder, field_idx: FieldIDX) {
 }
 
 /// Decoding a TypeIDX is the same as decoding a u32.
-/// 
+///
 /// Note: Despite the fact that type indices are replacable by RecTypeIDXs and DefTypes,
 /// these forms are impossible when used in a binary format.
 pub fn decode_type_idx(bits: BitArray) {
@@ -682,14 +677,12 @@ pub fn decode_type_idx(bits: BitArray) {
 }
 
 /// Encoding a TypeIDX is the same as encoding a u32.
-/// 
+///
 /// Note: Despite the fact that type indices are replacable by RecTypeIDXs and DefTypes,
 /// these forms are impossible when used in a binary format.
 pub fn encode_type_idx(builder: BytesBuilder, type_idx: TypeIDX) {
-  case type_idx {
-    TypeIDX(id) -> Ok(builder |> encode_u32(id))
-    _ -> Error("Invalid type index, found concrete index instead of numeric.")
-  }
+  let TypeIDX(type_idx) = type_idx
+  Ok(builder |> encode_u32(type_idx))
 }
 
 /// Decoding a MemIDX is the same as decoding a u32
@@ -759,7 +752,7 @@ pub fn encode_label_idx(builder: BytesBuilder, type_idx: LabelIDX) {
 }
 
 /// Decoding a limits definition follows two possible formats:
-/// 
+///
 /// 1. [0x00] [min: u32] - This represents a memory without a maximum size
 /// 2. [0x01] [min: u32] [max: u32] - This represents a memory with a maximum size
 pub fn decode_limits(bits: BitArray) {
@@ -778,7 +771,7 @@ pub fn decode_limits(bits: BitArray) {
 }
 
 /// Encoding a limits definition follows two possible formats:
-/// 
+///
 /// 1. [0x00] [min: u32] - This represents a memory without a maximum size
 /// 2. [0x01] [min: u32] [max: u32] - This represents a memory with a maximum size
 pub fn encode_limits(builder: BytesBuilder, limits: Limits) {
@@ -811,7 +804,7 @@ pub fn encode_mem_type(builder: BytesBuilder, mem_type: MemType) {
 }
 
 /// Table types are encoded using the following format:
-/// 
+///
 /// TableType -> [ref_type: RefType] [limits: Limits]
 pub fn decode_table_type(rest: BitArray) {
   use #(rt, rest) <- result.try(decode_ref_type(rest))
@@ -820,15 +813,15 @@ pub fn decode_table_type(rest: BitArray) {
 }
 
 /// Table types are encoded using the following format:
-/// 
+///
 /// TableType -> [ref_type: RefType] [limits: Limits]
 pub fn encode_table_type(builder: BytesBuilder, table_type: TableType) {
-  use builder <- result.try(builder |> encode_ref_type(table_type.t))
+  use builder <- result.try(builder |> encode_ref_type(table_type.ref_type))
   builder |> encode_limits(table_type.limits)
 }
 
 /// Global types are encoded using the following format:
-/// 
+///
 /// GlobalType -> [val_type: ValType] [mutability: Mutability]
 pub fn decode_global_type(rest: BitArray) {
   use #(vt, rest) <- result.try(decode_val_type(rest))
@@ -837,15 +830,15 @@ pub fn decode_global_type(rest: BitArray) {
 }
 
 /// Global types are encoded using the following format:
-/// 
+///
 /// GlobalType -> [val_type: ValType] [mutability: Mutability]
 pub fn encode_global_type(builder: BytesBuilder, global_type: GlobalType) {
-  use builder <- result.try(builder |> encode_val_type(global_type.vt))
-  builder |> encode_mut(global_type.mut)
+  use builder <- result.try(builder |> encode_val_type(global_type.val_type))
+  builder |> encode_mut(global_type.mutable)
 }
 
 /// Block types are encoded into three possible formats:
-/// 
+///
 /// 1. [0x40] - This represents a void block without any operands or results
 /// 2. A single ValType - This represents a block type that consumes a single ValType
 ///    operand.
@@ -870,7 +863,7 @@ pub fn decode_block_type(bits: BitArray) {
 }
 
 /// Block types are encoded into three possible formats:
-/// 
+///
 /// 1. [0x40] - This represents a void block without any operands or results
 /// 2. A single ValType - This represents a block type that consumes a single ValType
 ///    operand.
@@ -884,14 +877,12 @@ pub fn encode_block_type(builder: BytesBuilder, block_type: BlockType) {
       use s33_value <- result.map(type_idx |> unwrap_u32 |> s33)
       builder |> encode_s33(s33_value)
     }
-    _ ->
-      panic as "Concrete block types cannot be encoded. Something went wrong."
   }
 }
 
 /// Cast flags define the behavior of the `cast` instruction, defining which
 /// heap type operands are nullable.
-/// 
+///
 /// Please see the control instructions for more information:
 /// https://webassembly.github.io/gc/core/binary/instructions.html#control-instructions
 pub fn decode_cast_flags(bits: BitArray) {
@@ -920,7 +911,7 @@ pub fn encode_cast_flags(builder: BytesBuilder, cast_flags: #(Bool, Bool)) {
 
 /// MemArgs define the way load and store operations work in linear memory. They use the
 /// following format:
-/// 
+///
 /// MemArg -> [offset: u32] [align: u32]
 pub fn decode_mem_arg(bits: BitArray) {
   use #(offset, rest) <- result.try(decode_u32(bits))
@@ -930,7 +921,7 @@ pub fn decode_mem_arg(bits: BitArray) {
 
 /// MemArgs define the way load and store operations work in linear memory. They use the
 /// following format:
-/// 
+///
 /// MemArg -> [offset: u32] [align: u32]
 pub fn encode_mem_arg(builder: BytesBuilder, mem_arg: MemArg) {
   Ok(
@@ -960,27 +951,27 @@ pub fn encode_expression(
 /// until the list is empty.
 pub fn do_encode_instructions(
   builder: BytesBuilder,
-  insts: FingerTree(Instruction),
+  insts: List(Instruction),
 ) -> Result(BytesBuilder, String) {
   insts
-  |> finger_tree.try_reducel(builder, encode_instruction)
+  |> list.try_fold(builder, encode_instruction)
 }
 
 /// This function decodes an expression from a given BitArray, stopping when it
 /// encounters an "end" instruction.
 pub fn decode_expression(bits: BitArray) -> Result(#(Expr, BitArray), String) {
-  do_decode_expression(bits, finger_tree.empty)
+  do_decode_expression(bits, [])
 }
 
 fn do_decode_expression(
   bits: BitArray,
-  acc: FingerTree(Instruction),
+  acc: List(Instruction),
 ) -> Result(#(Expr, BitArray), String) {
   case bits {
-    <<0x0B, rest:bits>> -> Ok(#(Expr(acc), rest))
+    <<0x0B, rest:bits>> -> Ok(#(Expr(acc |> list.reverse), rest))
     _ -> {
       use #(inst, rest) <- result.try(decode_instruction(bits))
-      do_decode_expression(rest, acc |> finger_tree.push(inst))
+      do_decode_expression(rest, [inst, ..acc])
     }
   }
 }
@@ -988,22 +979,20 @@ fn do_decode_expression(
 /// This function decodes an if instruction, which is a special type of block
 /// that can contain an "else" instruction that denotes an alternative case
 /// if the condition is false.
-/// 
+///
 /// If an "end" is encountered before an "else" is encountered, the "else" branch
 /// is set to None, and the "If" instruction is returned.
 fn do_decode_if_instruction(
   bits: BitArray,
   bt: BlockType,
-  acc: FingerTree(Instruction),
+  acc: List(Instruction),
 ) -> Result(#(Instruction, BitArray), String) {
   case bits {
-    <<0x0B, rest:bits>> -> Ok(#(If(bt, acc, None), rest))
-    <<0x05, rest:bits>> -> {
-      do_decode_else_instruction(rest, bt, acc, finger_tree.empty)
-    }
+    <<0x0B, rest:bits>> -> Ok(#(If(bt, acc |> list.reverse, None), rest))
+    <<0x05, rest:bits>> -> do_decode_else_instruction(rest, bt, acc, [])
     _ -> {
       use #(inst, rest) <- result.try(decode_instruction(bits))
-      do_decode_if_instruction(rest, bt, acc |> finger_tree.push(inst))
+      do_decode_if_instruction(rest, bt, [inst, ..acc])
     }
   }
 }
@@ -1014,25 +1003,21 @@ fn do_decode_if_instruction(
 fn do_decode_else_instruction(
   bits: BitArray,
   bt: BlockType,
-  if_acc: FingerTree(Instruction),
-  else_acc: FingerTree(Instruction),
+  if_acc: List(Instruction),
+  else_acc: List(Instruction),
 ) -> Result(#(Instruction, BitArray), String) {
   case bits {
-    <<0x0B, rest:bits>> -> Ok(#(If(bt, if_acc, Some(else_acc)), rest))
+    <<0x0B, rest:bits>> ->
+      Ok(#(If(bt, if_acc |> list.reverse, Some(else_acc |> list.reverse)), rest))
     _ -> {
       use #(inst, rest) <- result.try(decode_instruction(bits))
-      do_decode_else_instruction(
-        rest,
-        bt,
-        if_acc,
-        else_acc |> finger_tree.push(inst),
-      )
+      do_decode_else_instruction(rest, bt, if_acc, [inst, ..else_acc])
     }
   }
 }
 
 /// For information on how each instruction is encoded, please see the specification:
-/// 
+///
 /// https://webassembly.github.io/gc/core/binary/instructions.html#instructions
 pub fn encode_instruction(
   builder: BytesBuilder,
@@ -2271,7 +2256,7 @@ pub fn encode_instruction(
 }
 
 /// For information on how each instruction is decoded, please see the specification:
-/// 
+///
 /// https://webassembly.github.io/gc/core/binary/instructions.html#instructions
 pub fn decode_instruction(
   bits: BitArray,
@@ -2293,7 +2278,7 @@ pub fn decode_instruction(
     }
     <<0x04, rest:bits>> -> {
       use #(bt, rest) <- result.try(decode_block_type(rest))
-      do_decode_if_instruction(rest, bt, finger_tree.empty)
+      do_decode_if_instruction(rest, bt, [])
     }
     <<0x0C, rest:bits>> -> {
       use #(label_idx, rest) <- result.map(decode_u32(rest))

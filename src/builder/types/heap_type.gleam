@@ -1,7 +1,7 @@
 import internal/structure/types.{
-  type DefType, type TypeIDX, AnyHeapType, ArrayHeapType, BotHeapType,
-  ConcreteHeapType, DefTypeReference, EqHeapType, ExternHeapType, FuncHeapType,
-  I31HeapType, NoExternHeapType, NoFuncHeapType, NoneHeapType, StructHeapType,
+  type TypeIDX, AnyHeapType, ArrayHeapType, BotHeapType, ConcreteHeapType,
+  EqHeapType, ExternHeapType, FuncHeapType, I31HeapType, NoExternHeapType,
+  NoFuncHeapType, NoneHeapType, StructHeapType,
 }
 
 pub const func = FuncHeapType
@@ -28,8 +28,4 @@ pub const bot = BotHeapType
 
 pub fn from_type_index(idx: TypeIDX) {
   ConcreteHeapType(idx)
-}
-
-pub fn from_def_type(def_type: DefType) {
-  ConcreteHeapType(DefTypeReference(def_type))
 }

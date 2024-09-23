@@ -7,7 +7,8 @@ Parse, encode, build, and analyze WebAssembly modules using `shine_coder`! This 
 a need to conquer and understand the new WebAssembly GC specification, so all the functions in this library
 are designed to follow the specification as closely as possible.
 
-Currently this project is in an Alpha state and the developer consuming this library is required to understand
+Currently this project is in a discovery state. Development on this project hasn't hit a point where it can
+be published to hex and the developer consuming this library is required to understand
 the structure of WASM modules in order to build them. For instance, creating a module with a simple `add`
 function requires the following steps:
 
@@ -65,7 +66,7 @@ intricacies of building WASM modules.
 
 ## Goals
 
-Some of these goals are personal, 
+Some of these goals are personal,
 
 1. Create a library that makes WebAssembly accessible to the Gleam package ecosystem
 2. Be compatible with JavaScript and Gleam Targets
@@ -75,7 +76,6 @@ Some of these goals are personal,
 
 ## Maintainers
 
-Special Thanks to
+Special Thanks to:
 
-Rishit Chaudhary <rishitc@users.noreply.github.com>
-
+**Rishit Chaudhary** <rishitc@users.noreply.github.com>
